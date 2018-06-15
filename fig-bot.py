@@ -1,38 +1,76 @@
 import discord
 import random
+import asyncio
 from discord.ext import commands
+from discord.utils import get
 
-BOT_PREFIX = "!"
-client = commands.Bot(command_prefix=BOT_PREFIX)
+bot = commands.Bot(command_prefix = "!", description = "I am a bot.")
 
-@client.event
-async def on_message(message):
-    # we do not want the bot to reply to itself
-    if message.author == client.user:
+@bot.command(pass_context = True)
+async def addrole(ctx, member: discord.Member = None, to_add: str = None):
+    if not str(ctx.message.author.top_role) == "What Is Plagiarism":
+        await ctx.send("You do not have permission to do that.")
         return
+    if member == None:
+        await ctx.send("Please specify a member.")
+    if to_add == None:
+        await ctx.send("Please specify a role.")
+        return
+    server = ctx.message.guild
+    role = discord.utils.get(server.roles, name = to_add)
+    await member.add_roles(role)
 
-    if message.content.startswith('!hello'):
-        msg = 'Hello {0.author.mention}'.format(message)
-        await message.channel.send(msg)
+@bot.command(pass_context = True)
+async def removerole(ctx, member: discord.Member = None, to_remove: str = None):
+    if not str(ctx.message.author.top_role) == "What Is Plagiarism":
+        await ctx.send("You do not have permission to do that.")
+        return
+    if member == None:
+        await ctx.send("Please specify a member.")
+        return
+    if to_remove == None:
+        await ctx.send("Please specify a role.")
+        return
+    server = ctx.message.guild
+    role = discord.utils.get(server.roles, name = to_remove)
+    if discord.utils.get(member.roles, name = to_remove) == None:
+        await ctx.send("This member does not have that role.")
+        return
+    await member.remove_roles(role)
 
-@client.event
+@bot.command(pass_context = True)
+async def hello(ctx):
+    # we do not want the bot to reply to itself
+    await ctx.send("Hello {0.mention}".format(ctx.message.author))
+
+@bot.command(pass_context = True)
+async def fuckyoubot(ctx):
+    possible_responses = [
+        "I don't speak to idiots",
+        "Fuck you too {0.mention}",
+        "Don't talk to me pussy ass bitch {0.mention}"]
+    await ctx.send(random.choice(possible_responses).format(ctx.message.author))
+
+@bot.command(pass_context = True)
+async def fuckyou(ctx, member : discord.Member = None):
+    if member == None:
+        member = ctx.message.author
+    await ctx.send("Fuck you {0.mention}".format(member))
+
+@bot.command(pass_context = True)
+async def test(ctx):
+    await ctx.send(str(ctx.message.author.top_role))
+
+@bot.event  
 async def on_ready():
     print('Logged in as')
-    print(client.user.name)
-    print(client.user.id)
+    print(bot.user.name)
+    print(bot.user.id)
     print('------')
 
-@client.commands()
-async def fuckyoubot():
-    possible_responses = [
-        "Fuck you too retard",
-        "Kill yourself retard ass bitch",
-        "I don't talk to subhumans"
-        ]
-    await client.say(random.choice(possible_responses))
-# @bot.command()
-# async def add(left : int, right : int):
-#     """Adds two numbers together."""
-#     await bot.say(left + right)
+@bot.command(pass_context = True)
+async def add(ctx, left : int, right : int):
+    """Adds two numbers together."""
+    await ctx.send(left + right)
 
-client.run('NDU2Nzg2MjI2NzQyMTY1NTI3.DgWnxg.puWWaVD1jE67kSRYKOEKwh8SxRk')
+bot.run('NDU2Nzg2MjI2NzQyMTY1NTI3.DgWnxg.puWWaVD1jE67kSRYKOEKwh8SxRk')
