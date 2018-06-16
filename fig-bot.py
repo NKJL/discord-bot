@@ -13,6 +13,7 @@ async def addrole(ctx, member: discord.Member = None, to_add: str = None):
         return
     if member == None:
         await ctx.send("Please specify a member.")
+        return
     if to_add == None:
         await ctx.send("Please specify a role.")
         return
@@ -69,7 +70,8 @@ async def on_ready():
     print('------')
 
 @bot.command(pass_context = True)
-async def add(ctx, left : int, right : int):
+async def add(ctx, 
+    left : int, right : int):
     """Adds two numbers together."""
     await ctx.send(left + right)
 
