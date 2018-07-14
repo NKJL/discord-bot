@@ -4,40 +4,110 @@ import asyncio
 from discord.ext import commands
 from discord.utils import get
 
+ADMIN_ID = "449356221040820235"
+
+
 bot = commands.Bot(command_prefix = "!", description = "I am a bot.")
 
-@bot.command(pass_context = True)
-async def addrole(ctx, member: discord.Member = None, to_add: str = None):
-    if not str(ctx.message.author.top_role) == "What Is Plagiarism":
-        await ctx.send("You do not have permission to do that.")
-        return
-    if member == None:
-        await ctx.send("Please specify a member.")
-        return
-    if to_add == None:
-        await ctx.send("Please specify a role.")
-        return
-    server = ctx.message.guild
-    role = discord.utils.get(server.roles, name = to_add)
-    await member.add_roles(role)
+# @bot.command(pass_context = True)
+# async def test(ctx):
+#     role_id = ctx.message.author.guild.roles.find("What Is Plagiarism")
 
 @bot.command(pass_context = True)
-async def removerole(ctx, member: discord.Member = None, to_remove: str = None):
-    if not str(ctx.message.author.top_role) == "What Is Plagiarism":
-        await ctx.send("You do not have permission to do that.")
-        return
-    if member == None:
-        await ctx.send("Please specify a member.")
-        return
-    if to_remove == None:
-        await ctx.send("Please specify a role.")
-        return
-    server = ctx.message.guild
-    role = discord.utils.get(server.roles, name = to_remove)
-    if discord.utils.get(member.roles, name = to_remove) == None:
-        await ctx.send("This member does not have that role.")
-        return
-    await member.remove_roles(role)
+async def addrole(ctx, member : discord.Member, to_add: str = None):
+    """add server role to MEMBER"""
+    try:
+        top_id = str(ctx.message.author.top_role.id)
+        if not top_id == ADMIN_ID:
+            await ctx.send("You do not have permission to do that.")
+            return
+        if not isinstance(member, discord.Member):
+            await ctx.send("Please specify a member.")
+            return
+        if to_add == None:
+            await ctx.send("Please specify a role.")
+            return
+        server = ctx.message.guild
+        role = discord.utils.get(server.roles, name = to_add)
+        await member.add_roles(role)
+        await ctx.send("Success.")
+    except:
+        await ctx.send("Error.")
+
+@bot.command(pass_context = True)
+async def removerole(ctx, member : discord.Member, to_remove: str = None):
+    """remove server role from MEMBER"""
+    try:
+        top_id = str(ctx.message.author.top_role.id)
+        if not top_id == ADMIN_ID:
+            await ctx.send("You do not have permission to do that.")
+            return
+        if not isinstance(member, discord.Member):
+            await ctx.send("Please specify a member.")
+            return
+        if to_remove == None:
+            await ctx.send("Please specify a role.")
+            return
+        server = ctx.message.guild
+        role = discord.utils.get(server.roles, name = to_remove)
+        if discord.utils.get(member.roles, name = to_remove) == None:
+            await ctx.send("This member does not have that role.")
+            return
+        await member.remove_roles(role)
+        await ctx.send("Success.")
+    except:
+        await ctx.send("Error")
+        
+
+
+@bot.command(pass_context = True)
+async def createvc(ctx, channel_name : str):
+    """creates voice channel"""
+    try: 
+        top_id = str(ctx.message.author.top_role.id)
+        if not top_id == ADMIN_ID:
+            await ctx.send("You do not have permission to do that.")
+            return
+        channel = await ctx.guild.create_voice_channel(channel_name)
+    except:
+        await ctx.send("Error. Please try again.")
+
+@bot.command(pass_context = True)
+async def deletevc(ctx, channel_name : str):
+    """removes voice channel"""
+    try: 
+        top_id = str(ctx.message.author.top_role.id)
+        if not top_id == ADMIN_ID:
+            await ctx.send("You do not have permission to do that.")
+            return
+        channel = discord.utils.get(ctx.guild.voice_channels, name = channel_name)
+        await channel.delete()
+    except:
+        await ctx.send("Error. Please try again.") 
+
+@bot.command(pass_context = True)
+async def vkick(ctx, member : discord.Member):
+    """kicks member from voice channel"""
+    try:
+        top_id = str(ctx.message.author.top_role.id)
+        if not top_id == ADMIN_ID:
+            await ctx.send("You do not have permission to do that.")
+            return
+        vmember = ''
+        if isinstance(member, str):
+            vmember = discord.utils.get(ctx.guild.members, name = member)
+        else:
+            vmember = member
+        if not isinstance(vmember, discord.Member):
+            await ctx.send("Please specify a user")
+            return
+        channel = await ctx.guild.create_voice_channel('kicked')    
+        await member.move_to(channel)
+        await channel.delete()
+        await ctx.send("Successfully kicked {0.name}".format(vmember))   
+    except:
+        await ctx.send("Error.")
+
 
 @bot.command(pass_context = True)
 async def hello(ctx):
@@ -46,12 +116,24 @@ async def hello(ctx):
 
 @bot.command(pass_context = True)
 async def fuckyoubot(ctx):
+    await ctx.send("Fuck you too!")
+
+
+
+@bot.command(pass_context = True)
+async def insult(ctx, member : discord.Member = None, tts = None):
+    """insults given user with preset insults"""
+    role = str(ctx.message.author.top_role);
+    # if not role == "What Is Plagiarism" or not role == "Fig"  
+    if not isinstance(member, discord.Member):
+        await ctx.send("You must mention a user.")
+        return
     possible_responses = [
-        "I don't speak to idiots",
-        "Fuck you too {0.mention}",
-        "Don't talk to me pussy ass bitch {0.mention}",
-        "What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Navy Seals, and I've been involved in numerous secret raids on Al-Quaeda, and I have over 300 confirmed kills. I am trained in gorilla warfare and I'm the top sniper in the entire US armed forces. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Earth, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of spies across the USA and your IP is being traced right now so you better prepare for the storm, maggot. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bare hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the United States Marine Corps and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will shit fury all over you and you will drown in it. You're fucking dead, kiddo.",
-        "What the fuck did you just fucking type about me, you little bitch? I'll have you know I graduated top of my class at MIT, and I've been involved in numerous secret raids with Anonymous, and I have over 300 confirmed DDoSes. I am trained in online trolling and I'm the top hacker in the entire world. You are nothing to me but just another virus host. I will wipe you the fuck out with precision the likes of which has never been seen before on the Internet, mark my fucking words. You think you can get away with typing that shit to me over the Internet? Think again, fucker. As we chat over IRC I am tracing your IP with my damn bare hands so you better prepare for the storm, maggot. The storm that wipes out the pathetic little thing you call your computer. You're fucking dead, kid. I can be anywhere, anytime, and I can hack into your files in over seven hundred ways, and that's just with my bare hands. Not only am I extensively trained in hacking, but I have access to the entire arsenal of every piece of malware ever created and I will use it to its full extent to wipe your miserable ass off the face of the world wide web, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking fingers. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will shit code all over you and you will drown in it. You're fucking dead, kiddo."
+        # "I don't speak to idiots",
+        # "Fuck you too {0.mention}",
+        # "Don't talk to me pussy ass bitch {0.mention}"
+        # "What the fuck did you just fucking say about me, you little bitch? I'll have you know I graduated top of my class in the Navy Seals, and I've been involved in numerous secret raids on Al-Quaeda, and I have over 300 confirmed kills. I am trained in gorilla warfare and I'm the top sniper in the entire US armed forces. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Earth, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of spies across the USA and your IP is being traced right now so you better prepare for the storm, maggot. The storm that wipes out the pathetic little thing you call your life. You're fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bare hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the United States Marine Corps and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will shit fury all over you and you will drown in it. You're fucking dead, kiddo.",
+        # "What the fuck did you just fucking type about me, you little bitch? I'll have you know I graduated top of my class at MIT, and I've been involved in numerous secret raids with Anonymous, and I have over 300 confirmed DDoSes. I am trained in online trolling and I'm the top hacker in the entire world. You are nothing to me but just another virus host. I will wipe you the fuck out with precision the likes of which has never been seen before on the Internet, mark my fucking words. You think you can get away with typing that shit to me over the Internet? Think again, fucker. As we chat over IRC I am tracing your IP with my damn bare hands so you better prepare for the storm, maggot. The storm that wipes out the pathetic little thing you call your computer. You're fucking dead, kid. I can be anywhere, anytime, and I can hack into your files in over seven hundred ways, and that's just with my bare hands. Not only am I extensively trained in hacking, but I have access to the entire arsenal of every piece of malware ever created and I will use it to its full extent to wipe your miserable ass off the face of the world wide web, you little shit. If only you could have known what unholy retribution your little \"clever\" comment was about to bring down upon you, maybe you would have held your fucking fingers. But you couldn't, you didn't, and now you're paying the price, you goddamn idiot. I will shit code all over you and you will drown in it. You're fucking dead, kiddo."
         ]
     a = ['artless', 'bawdy', 'beslubbering', 'bootless', 'churlish', 'cockered', 'clouted', 'craven', 'currish', 'dankish', 'dissembling', 'droning', 'errant', 'fawning', 'fobbing', 'froward', 'frothy', 'gleeking', 'goatish', 'gorbellied', 'impertinent', 'infectious', 'jarring', 'loggerheaded',
         'lumpish', 'mammering', 'mangled', 'mewling', 'paunchy', 'pribbling', 'puking', 'puny', 'qualling', 'rank', 'reeky', 'roguish', 'pruttish', 'saucy', 'spleeny', 'spongy', 'surly', 'tottering', 'unmuzzled', 'vain', 'venomed', 'villainous', 'warped', 'wayward', 'weedy', 'yeasty']
@@ -63,17 +145,23 @@ async def fuckyoubot(ctx):
         possible_responses.append("{0.mention} is a " + random.choice(a) + " " + random.choice(b) + " " + random.choice(c) + ".")
     for _ in range(3):
         possible_responses.append("{0.mention} has a " + random.choice(a) + " penis.")
-    await ctx.send(random.choice(possible_responses).format(ctx.message.author))
+    if (tts == None):
+        await ctx.send(random.choice(possible_responses).format(member))
+    elif (tts == 'tts'):
+        await ctx.send( random.choice(possible_responses).format(member), tts = 'yes')
+    else:
+        await ctx.send("Unknown sub-command")
 
-@bot.command(pass_context = True)
-async def fuckyou(ctx, member : discord.Member = None):
-    if member == None:
-        member = ctx.message.author
-    await ctx.send("Fuck you {0.mention}".format(member))
+# @bot.command(pass_context = True)
+# async def insult(ctx, member : discord.Member = None):
+#     if member == None:
+#         member = ctx.message.author
+#     await ctx.send("Fuck you {0.mention}".format(member))
 
 @bot.command(pass_context = True)
 async def test(ctx):
     await ctx.send(str(ctx.message.author.top_role))
+
 
 @bot.event  
 async def on_ready():
@@ -88,4 +176,8 @@ async def add(ctx,
     """Adds two numbers together."""
     await ctx.send(left + right)
 
-bot.run('NDU2Nzg2MjI2NzQyMTY1NTI3.DgWnxg.puWWaVD1jE67kSRYKOEKwh8SxRk')
+bot.run('')
+
+
+
+
