@@ -9,9 +9,62 @@ ADMIN_ID = "449356221040820235"
 
 bot = commands.Bot(command_prefix = "!", description = "I am a bot.")
 
-# @bot.command(pass_context = True)
-# async def test(ctx):
-#     role_id = ctx.message.author.guild.roles.find("What Is Plagiarism")
+filter = False
+counter = 0
+
+print("HELLO")
+print(filter)
+
+@bot.command(pass_context = True)
+async def filter(ctx, switch):
+    await ctx.send("Accessed command")
+    global filter
+    filter = switch
+    await ctx.send("switched " + str(filter))
+
+@bot.event
+async def on_message(message):
+    global filter
+    if message.content.startswith("!"):
+        await bot.process_commands(message)
+        return
+    if message.author.bot:
+        await bot.process_commands(message)
+        return
+    if filter:
+        await message.channel.send("filter is currently " + str(filter))
+        if "fuck" in message.content.lower():
+            channel = message.channel
+            await channel.send("This is a hecking Christian server!")
+            await channel.send(filter)
+    await bot.process_commands(message)
+
+@bot.command()
+async def count(ctx, number):
+    global counter
+    for x in range(0, int(number)):
+        counter += 1
+    print(counter)
+
+# class NotAdmin(commands.CheckFailure):
+#     pass
+
+# def is_admin():
+#     async def predicate(ctx):
+#         if ctx.author.top_role.id != ADMIN_ID:
+#             raise NotAdmin("You are not an admin.")
+#         return True
+#     return commands.check(predicate)
+
+# async def is_admin(ctx):
+#     if ctx.author.top_role.id != ADMIN_ID:
+#         raise NotAdmin("You are not an admin.")
+#     return True
+
+# @is_admin.error
+# async def is_admin_error(ctx, error):
+#     if isinstance(error, commands.CheckFailure):
+#         await ctx.send("You are not an admin.")
 
 @bot.command(pass_context = True)
 async def addrole(ctx, member : discord.Member, to_add: str = None):
@@ -127,6 +180,23 @@ async def fuckyoubot(ctx):
     await ctx.send("Fuck you too!")
 
 
+
+@bot.command(pass_context = True)
+async def ping(ctx, member : discord.Member, freq = 1):
+    """pings user number of times"""
+    try:
+        top_id = str(ctx.message.author.top_role.id)
+        if not top_id == ADMIN_ID:
+            await ctx.send("You do not have permission to do that.")
+            return
+        if freq > 10:
+            await ctx.send("Select number less than 10")
+            return
+        for x in range(0, freq):
+            await ctx.send("{0.mention}".format(member))
+    except:
+        await ctx.send("Error.")
+
 # @bot.command(pass_context = True)
 # async def play(ctx, member, )
 
@@ -171,8 +241,10 @@ async def insult(ctx, member : discord.Member = None, tts = None):
 #     await ctx.send("Fuck you {0.mention}".format(member))
 
 @bot.command(pass_context = True)
+# @commands.check(is_admin)
 async def test(ctx):
     await ctx.send(str(ctx.message.author.top_role))
+
 
 
 @bot.event  
