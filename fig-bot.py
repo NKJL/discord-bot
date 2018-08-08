@@ -29,15 +29,17 @@ async def on_message(message):
         await bot.process_commands(message)
         return
     if message.author.bot:
-        await bot.process_commands(message)
+        # await bot.process_commands(message)
         return
+    await message.channel.send("somehow got here but isn't sending what's after it")
+    await message.channel.send("filter is currently " + filter)
     if filter:
         await message.channel.send("filter is currently " + str(filter))
         if "fuck" in message.content.lower():
             channel = message.channel
             await channel.send("This is a hecking Christian server!")
             await channel.send(filter)
-    await bot.process_commands(message)
+    # await bot.process_commands(message)
 
 @bot.command()
 async def count(ctx, number):
