@@ -11,17 +11,20 @@ ADMIN_ID = "449356221040820235"
 bot = commands.Bot(command_prefix = "!", description = "I am a bot.")
 
 # filterz = True
-filterp = False
+filterp = "False"
 counter = 0
 
-print("HELLO")
-print(filterp)
+# print("HELLO")
+# print(filterp)
 
 @bot.command(pass_context = True)
 async def filterf(ctx, switch):
     global filterp
+    if switch != "False" and switch != "True":
+        await ctx.send("Specifiy True or False.")
+        return
     filterp = switch
-    await ctx.send("filterp is currently " + str(filterp))
+    await ctx.send("filterp is currently " + filterp)
 
 @bot.event
 async def on_message(message):
@@ -33,9 +36,9 @@ async def on_message(message):
     if message.author.bot:
         return
     else:
-        await message.channel.send("filterp is currently " + str(filterp))
+        # await message.channel.send("filterp is currently " + filterp)
         # await message.channel.send("filterz is currently " + filterz)
-        if filterp:
+        if filterp == "True":
             if "fuck" in message.content.lower():
                 channel = message.channel
                 await message.add_reaction("\U0001F632")
@@ -46,7 +49,7 @@ async def on_message(message):
                 ]
                 await channel.send(random.choice(possible_responses))
         else:
-            await message.channel.send("False")
+            # await message.channel.send("False")
             return
 
 @bot.command()
