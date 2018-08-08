@@ -1,6 +1,7 @@
 import discord
 import random
 import asyncio
+import unicodedata
 from discord.ext import commands
 from discord.utils import get
 
@@ -17,29 +18,34 @@ print(filter)
 
 @bot.command(pass_context = True)
 async def filter(ctx, switch):
-    await ctx.send("Accessed command")
     global filter
     filter = switch
-    await ctx.send("switched " + str(filter))
+    await ctx.send("filter is currently " + filter)
 
 @bot.event
 async def on_message(message):
+    """reacts based on message content"""
     global filter
     if message.content.startswith("!"):
         await bot.process_commands(message)
         return
     if message.author.bot:
-        # await bot.process_commands(message)
         return
-    await message.channel.send("somehow got here but isn't sending what's after it")
-    await message.channel.send("filter is currently " + filter)
-    if filter:
-        await message.channel.send("filter is currently " + str(filter))
-        if "fuck" in message.content.lower():
-            channel = message.channel
-            await channel.send("This is a hecking Christian server!")
-            await channel.send(filter)
-    # await bot.process_commands(message)
+    else:
+        await message.channel.send("filter is currently " + filter)
+        if filter:
+            if "fuck" in message.content.lower():
+                channel = message.channel
+                await message.add_reaction("\U0001F632")
+                possible_responses = [
+                    "You need Jesus.",
+                    "This is a hecking Christian server.",
+                    "No cursing in this wholesome server you heathen."
+                ]
+                await channel.send(random.choice(possible_responses))
+        else:
+            await message.channel.send("False")
+            return
 
 @bot.command()
 async def count(ctx, number):
