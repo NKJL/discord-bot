@@ -268,11 +268,13 @@ vc = None
 
 @bot.group(pass_context = True)
 async def music(ctx):
+    """music players"""
     if ctx.invoked_subcommand is None:
         await ctx.send("Invalid subcommand.")
 
 @music.command(pass_context = True)
 async def connect(ctx):
+    """connects to voice channel of user"""
     try:
         global vc
         author = ctx.message.author
@@ -288,6 +290,7 @@ async def connect(ctx):
 
 @music.command(pass_context = True)
 async def play(ctx, url):
+    """plays given Youtube url"""
     try:
         global vc
 
@@ -323,6 +326,7 @@ async def play(ctx, url):
 
 @music.command(pass_context = True)
 async def pause(ctx):
+    """pauses audio"""
     global vc
     if vc is None or not vc.is_playing():
         await ctx.send("Nothing is playing.")
@@ -331,6 +335,7 @@ async def pause(ctx):
 
 @music.command(pass_context = True)
 async def resume(ctx):
+    """resumes audio"""
     global vc
     if vc is None or not vc.is_paused():
         await ctx.send("Nothing is paused.")
@@ -339,6 +344,7 @@ async def resume(ctx):
 
 @music.command(pass_context = True)
 async def stop(ctx):
+    """stops playing"""
     global vc
     if vc is None and not vc.is_playing():
         await ctx.send("Nothing is playing.")
@@ -347,6 +353,7 @@ async def stop(ctx):
 
 @music.command(pass_context = True)
 async def volume(ctx, vol):
+    """adjusts volume between 0 to 10 inclusive"""
     global vc
     if not vc.is_playing or not vc.is_paused:
         await ctx.send("Nothing is playing or paused.")
@@ -358,6 +365,7 @@ async def volume(ctx, vol):
 
 @music.command(pass_context = True)
 async def dc(ctx):
+    """disconnects voice client"""
     global vc
     if vc is None:
         await ctx.send("Nothing to disconnect.")
