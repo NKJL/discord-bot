@@ -266,37 +266,104 @@ async def test(ctx):
 
 vc = None
 
-# @bot.group(pass_context = True)
+@bot.group(pass_context = True)
+async def music(ctx):
+    if ctx.invoked_subcommand is None:
+        await ctx.send("Invalid subcommand.")
 
-@bot.command(pass_context = True)
-async def yt(ctx, url):
+@music.command(pass_context = True)
+async def connect(ctx):
+    try:
+        global vc
+        author = ctx.message.author
+        voice_channel = author.voice.channel
+
+        if vc is not None:
+            await vc.disconnect()
+        vc = await voice_channel.connect()
+        await ctx.send("Connected to voice channel.")
+    except:
+        await ctx.send("Error.")
+
+
+@music.command(pass_context = True)
+async def play(ctx, url):
+    try:
+        global vc
+
+        if vc is None:
+            await ctx.send("No Voice Client detected.")
+            return
+        # author = ctx.message.author
+        # voice_channel = author.voice.channel
+        # discord.opus.load_opus('opus')
+        opts = {}
+        with youtube_dl.YoutubeDL(opts) as ydl:
+            song_info = ydl.extract_info(url, download = False)
+        if 'entries' in song_info:
+            # Can be a playlist or a list of videos
+            video = song_info['entries'][0]
+        else:
+            # Just a video
+            video = song_info 
+        # print(video)
+        video_url = "youtube.com/watch?v=" + video['id']
+        audio_url = video['formats'][1].get('url')
+        print(audio_url)    
+
+        # vc = await voice_channel.connect()
+        vc.play(discord.FFmpegPCMAudio(audio_url), after=lambda e: print('done', e))
+        vc.source = discord.PCMVolumeTransformer(vc.source)
+        vc.source.volume = 0.2
+
+        # player = await vc.create_ytdl_player(url)
+        # player.start()
+    except:
+        await ctx.send("Error.")
+
+@music.command(pass_context = True)
+async def pause(ctx):
     global vc
+    if vc is None or not vc.is_playing():
+        await ctx.send("Nothing is playing.")
+        return
+    vc.pause()
 
-    author = ctx.message.author
-    voice_channel = author.voice.channel
-    # discord.opus.load_opus('opus')
-    opts = {}
-    with youtube_dl.YoutubeDL(opts) as ydl:
-        song_info = ydl.extract_info(url, download = False)
-    if 'entries' in song_info:
-        # Can be a playlist or a list of videos
-        video = song_info['entries'][0]
-    else:
-        # Just a video
-        video = song_info 
-    # print(video)
-    video_url = "youtube.com/watch?v=" + video['id']
-    audio_url = video['formats'][1].get('url')
-    print(audio_url)    
+@music.command(pass_context = True)
+async def resume(ctx):
+    global vc
+    if vc is None or not vc.is_paused():
+        await ctx.send("Nothing is paused.")
+        return
+    vc.resume()
 
-    vc = await voice_channel.connect()
-    vc.play(discord.FFmpegPCMAudio(audio_url), after=lambda e: print('done', e))
+@music.command(pass_context = True)
+async def stop(ctx):
+    global vc
+    if vc is None and not vc.is_playing():
+        await ctx.send("Nothing is playing.")
+        return
+    vc.stop()
 
-    # player = await vc.create_ytdl_player(url)
-    # player.start()
+@music.command(pass_context = True)
+async def volume(ctx, vol):
+    global vc
+    if not vc.is_playing or not vc.is_paused:
+        await ctx.send("Nothing is playing or paused.")
+        return
+    if vol > 10 or vol < 0:
+        await ctx.send("Please enter a number between 0 and 10")
+        return
+    vc.source.volume = vol / 10
 
-
-
+@music.command(pass_context = True)
+async def dc(ctx):
+    global vc
+    if vc is None:
+        await ctx.send("Nothing to disconnect.")
+        return
+    await vc.disconnect()
+    await ctx.send("Disconnected voice client.")
 
 @bot.event  
 async def on_ready():
