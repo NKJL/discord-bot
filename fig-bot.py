@@ -10,30 +10,32 @@ ADMIN_ID = "449356221040820235"
 
 bot = commands.Bot(command_prefix = "!", description = "I am a bot.")
 
-filter = False
+# filterz = True
+filterp = False
 counter = 0
 
 print("HELLO")
-print(filter)
+print(filterp)
 
 @bot.command(pass_context = True)
-async def filter(ctx, switch):
-    global filter
-    filter = switch
-    await ctx.send("filter is currently " + filter)
+async def filterf(ctx, switch):
+    global filterp
+    filterp = switch
+    await ctx.send("filterp is currently " + str(filterp))
 
 @bot.event
 async def on_message(message):
     """reacts based on message content"""
-    global filter
+    global filterp
     if message.content.startswith("!"):
         await bot.process_commands(message)
         return
     if message.author.bot:
         return
     else:
-        await message.channel.send("filter is currently " + filter)
-        if filter:
+        await message.channel.send("filterp is currently " + str(filterp))
+        # await message.channel.send("filterz is currently " + filterz)
+        if filterp:
             if "fuck" in message.content.lower():
                 channel = message.channel
                 await message.add_reaction("\U0001F632")
