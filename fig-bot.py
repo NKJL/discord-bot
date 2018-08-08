@@ -2,6 +2,7 @@ import discord
 import random
 import asyncio
 import unicodedata
+import youtube_dl
 from discord.ext import commands
 from discord.utils import get
 
@@ -10,54 +11,58 @@ ADMIN_ID = "449356221040820235"
 
 bot = commands.Bot(command_prefix = "!", description = "I am a bot.")
 
-# filterz = True
 filterp = "False"
-counter = 0
-
-# print("HELLO")
-# print(filterp)
+# counter = 0
 
 @bot.command(pass_context = True)
-async def filterf(ctx, switch):
-    global filterp
-    if switch != "False" and switch != "True":
-        await ctx.send("Specifiy True or False.")
-        return
-    filterp = switch
-    await ctx.send("filterp is currently " + filterp)
+async def filterswitch(ctx, switch):
+    """turns profanity filter on or off (True/False)"""
+    try:
+        top_id = str(ctx.message.author.top_role.id)
+        if not top_id == ADMIN_ID:
+            await ctx.send("You do not have permission to do that.")
+            return
+        global filterp
+        if switch != "False" and switch != "True":
+            await ctx.send("Specifiy True or False.")
+            return
+        filterp = switch
+        await ctx.send("filterp is currently " + filterp)
+    except:
+        await ctx.send("Error.")
 
 @bot.event
 async def on_message(message):
     """reacts based on message content"""
-    global filterp
-    if message.content.startswith("!"):
-        await bot.process_commands(message)
-        return
-    if message.author.bot:
-        return
-    else:
-        # await message.channel.send("filterp is currently " + filterp)
-        # await message.channel.send("filterz is currently " + filterz)
-        if filterp == "True":
-            if "fuck" in message.content.lower():
-                channel = message.channel
-                await message.add_reaction("\U0001F632")
-                possible_responses = [
-                    "You need Jesus.",
-                    "This is a hecking Christian server.",
-                    "No cursing in this wholesome server you heathen."
-                ]
-                await channel.send(random.choice(possible_responses))
-        else:
-            # await message.channel.send("False")
+    try:
+        global filterp
+        if message.content.startswith("!"):
+            await bot.process_commands(message)
             return
+        if message.author.bot:
+            return
+        else:
+            if filterp == "True":
+                if "fuck" in message.content.lower():
+                    channel = message.channel
+                    await message.add_reaction("\U0001F632")
+                    possible_responses = [
+                        "You need Jesus.",
+                        "This is a hecking Christian server.",
+                        "No cursing in this wholesome server you heathen."
+                    ]
+                    await channel.send(random.choice(possible_responses))
+            else:
+                return
+    except:
+        await message.channel.send("Error.")
 
-@bot.command()
-async def count(ctx, number):
-    global counter
-    for x in range(0, int(number)):
-        counter += 1
-    print(counter)
+# @bot.command()
+# async def count(ctx, number):
+#     global counter
+#     for x in range(0, int(number)):
+#         counter += 1
+#     print(counter)
 
 # class NotAdmin(commands.CheckFailure):
 #     pass
@@ -257,6 +262,39 @@ async def insult(ctx, member : discord.Member = None, tts = None):
 # @commands.check(is_admin)
 async def test(ctx):
     await ctx.send(str(ctx.message.author.top_role))
+
+
+vc = None
+
+# @bot.group(pass_context = True)
+
+@bot.command(pass_context = True)
+async def yt(ctx, url):
+    global vc
+
+    author = ctx.message.author
+    voice_channel = author.voice.channel
+    # discord.opus.load_opus('opus')
+    opts = {}
+    with youtube_dl.YoutubeDL(opts) as ydl:
+        song_info = ydl.extract_info(url, download = False)
+    if 'entries' in song_info:
+        # Can be a playlist or a list of videos
+        video = song_info['entries'][0]
+    else:
+        # Just a video
+        video = song_info 
+    # print(video)
+    video_url = "youtube.com/watch?v=" + video['id']
+    audio_url = video['formats'][1].get('url')
+    print(audio_url)    
+
+    vc = await voice_channel.connect()
+    vc.play(discord.FFmpegPCMAudio(audio_url), after=lambda e: print('done', e))
+
+    # player = await vc.create_ytdl_player(url)
+    # player.start()
+
 
 
 
