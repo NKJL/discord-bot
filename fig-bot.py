@@ -391,7 +391,7 @@ async def volume(ctx, vol):
     author = ctx.message.author
     top_id = author.top_role.id
 
-    if vol > 10 or vol < 0:
+    if int(vol) > 10 or int(vol) < 0:
         await ctx.send("Please enter a number between 0 and 10")
         return
 
@@ -433,7 +433,7 @@ async def forcedc(ctx):
     author = ctx.message.author
     top_id = author.top_role.id
 
-    if top_id != ADMIN_ID:
+    if str(top_id) != ADMIN_ID:
         await ctx.send("You do not have permission to do that.")
         return
 
