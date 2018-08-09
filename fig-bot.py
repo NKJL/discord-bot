@@ -269,8 +269,9 @@ async def connect(ctx, target = None):
         if audio_controller is None:
             audio_controller = author
         else:
-            await ctx.send("Someone has already summoned the bot to play audio!")
-            return
+            if author is not audio_controller:
+                await ctx.send("Someone has already summoned the bot to play audio!")
+                return
 
         if target is None:
             voice_channel = author.voice.channel
@@ -294,11 +295,13 @@ async def play(ctx, url):
     try:
         global vc
         global audio_controller
+        author = ctx.message.author
 
         if audio_controller is not None:
-            await ctx.send("Someone has already summoned the bot to play audio!")
-            return
-
+            if author is not audio_controller:
+                await ctx.send("Someone has already summoned the bot to play audio!")
+                return
+            
         if vc is None:
             await ctx.send("No Voice Client detected.")
             return
@@ -334,10 +337,12 @@ async def pause(ctx):
     """pauses audio"""
     global vc
     global audio_controller
+    author = ctx.message.author
 
     if audio_controller is not None:
-        await ctx.send("Someone has already summoned the bot to play audio!")
-        return
+        if author is not audio_controller:
+            await ctx.send("Someone has already summoned the bot to play audio!")
+            return
 
     if vc is None or not vc.is_playing():
         await ctx.send("Nothing is playing.")
@@ -349,10 +354,12 @@ async def resume(ctx):
     """resumes audio"""
     global vc
     global audio_controller
+    author = ctx.message.author
 
     if audio_controller is not None:
-        await ctx.send("Someone has already summoned the bot to play audio!")
-        return
+        if author is not audio_controller:
+            await ctx.send("Someone has already summoned the bot to play audio!")
+            return
 
     if vc is None or not vc.is_paused():
         await ctx.send("Nothing is paused.")
@@ -364,10 +371,12 @@ async def stop(ctx):
     """stops playing"""
     global vc
     global audio_controller
+    author = ctx.message.author
 
     if audio_controller is not None:
-        await ctx.send("Someone has already summoned the bot to play audio!")
-        return
+        if author is not audio_controller:
+            await ctx.send("Someone has already summoned the bot to play audio!")
+            return
 
     if vc is None and not vc.is_playing():
         await ctx.send("Nothing is playing.")
@@ -379,7 +388,8 @@ async def volume(ctx, vol):
     """adjusts volume between 0 to 10 inclusive"""
     global vc
     global audio_controller
-    top_id = ctx.message.author.top_role.id
+    author = ctx.message.author
+    top_id = author.top_role.id
 
     if vol > 10 or vol < 0:
         await ctx.send("Please enter a number between 0 and 10")
@@ -387,6 +397,9 @@ async def volume(ctx, vol):
 
     if audio_controller is not None:
         if top_id != ADMIN_ID:
+            await ctx.send("Someone else is controlling the bot's audio at the moment.")
+            return
+        if author is not audio_controller:
             await ctx.send("Someone else is controlling the bot's audio at the moment.")
             return
 
@@ -401,10 +414,12 @@ async def dc(ctx):
     """disconnects voice client"""
     global vc
     global audio_controller
+    author = ctx.message.author
 
     if audio_controller is not None:
-        await ctx.send("You can't disconnect someone else's audio.")
-        return
+        if author is not audio_controller:
+            await ctx.send("You can't disconnect someone else's audio.")
+            return
 
     if vc is None:
         await ctx.send("Nothing to disconnect.")
@@ -415,8 +430,9 @@ async def dc(ctx):
 @music.command(pass_context = True)
 async def forcedc(ctx):
     global vc
+    author = ctx.message.author
+    top_id = author.top_role.id
 
-    top_id = ctx.message.author.top_role.id
     if not top_id == ADMIN_ID:
         await ctx.send("You do not have permission to do that.")
         return
