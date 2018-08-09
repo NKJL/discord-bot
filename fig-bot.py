@@ -5,26 +5,30 @@ import unicodedata
 import youtube_dl
 from discord.ext import commands
 from discord.utils import get
+from utils import *
 
-ADMIN_ID = "449356221040820235"
+ADMIN_ID = "449356221040820235"             # Role ID for admin
+EVERYONE_ID = "191048044706398208"          # Role ID for @everyone
+ADMIN_PERMISSIONS_VALUE = "2080898303"      # Permission value in beg-bug for admin
 
 
-bot = commands.Bot(command_prefix = "!", description = "I am a bot.")
+bot = commands.Bot(command_prefix = "!", description = "I am a bot.") # Bot
+vc = None   # VoiceClient
+audio_controller = None # current user controlling audio
 
-filterp = "False"
-# counter = 0
+filterp = "off" # tracks profanity filter
 
 @bot.command(pass_context = True)
 async def filterswitch(ctx, switch):
-    """turns profanity filter on or off (True/False)"""
+    """turns profanity filter on or off"""
     try:
         top_id = str(ctx.message.author.top_role.id)
         if not top_id == ADMIN_ID:
             await ctx.send("You do not have permission to do that.")
             return
         global filterp
-        if switch != "False" and switch != "True":
-            await ctx.send("Specifiy True or False.")
+        if switch != "off" and switch != "on":
+            await ctx.send("Specifiy on or off.")
             return
         filterp = switch
         await ctx.send("filterp is currently " + filterp)
@@ -42,14 +46,14 @@ async def on_message(message):
         if message.author.bot:
             return
         else:
-            if filterp == "True":
+            if filterp == "on":
                 if "fuck" in message.content.lower():
                     channel = message.channel
                     await message.add_reaction("\U0001F632")
                     possible_responses = [
-                        "You need Jesus.",
                         "This is a hecking Christian server.",
-                        "No cursing in this wholesome server you heathen."
+                        "No cursing in this wholesome server you heathen.",
+                        "Do you kiss your mother with that mouth?"
                     ]
                     await channel.send(random.choice(possible_responses))
             else:
@@ -57,32 +61,17 @@ async def on_message(message):
     except:
         await message.channel.send("Error.")
 
-# @bot.command()
-# async def count(ctx, number):
-#     global counter
-#     for x in range(0, int(number)):
-#         counter += 1
-#     print(counter)
+@bot.command(pass_context = True)
+async def checkprivilege(ctx, member : discord.Member):
+    # await ctx.send("This member has the following roles: " + str(member.roles))
+    # await ctx.send("The server has the following roles: " + str(ctx.guild.roles))
+    await ctx.send(str(member.guild.text_channels))
+    channel = discord.utils.get(ctx.guild.text_channels, name = "beg-bug")
+    await ctx.send(str(member.permissions_in(channel)))
 
-# class NotAdmin(commands.CheckFailure):
-#     pass
-
-# def is_admin():
-#     async def predicate(ctx):
-#         if ctx.author.top_role.id != ADMIN_ID:
-#             raise NotAdmin("You are not an admin.")
-#         return True
-#     return commands.check(predicate)
-
-# async def is_admin(ctx):
-#     if ctx.author.top_role.id != ADMIN_ID:
-#         raise NotAdmin("You are not an admin.")
-#     return True
-
-# @is_admin.error
-# async def is_admin_error(ctx, error):
-#     if isinstance(error, commands.CheckFailure):
-#         await ctx.send("You are not an admin.")
+#
+# ADMINISTRATIVE 
+#
 
 @bot.command(pass_context = True)
 async def addrole(ctx, member : discord.Member, to_add: str = None):
@@ -128,8 +117,6 @@ async def removerole(ctx, member : discord.Member, to_remove: str = None):
         await ctx.send("Success.")
     except:
         await ctx.send("Error")
-        
-
 
 @bot.command(pass_context = True)
 async def createvc(ctx, channel_name : str):
@@ -172,6 +159,10 @@ async def vkick(ctx, member : discord.Member):
         await ctx.send("Error.")
 
 
+#
+# MISC. FUNCTIONS
+#
+
 @bot.command(pass_context = True)
 async def tts(ctx, message : str, channel : str = None):
     # for c in ctx.message.guild.text_channels:
@@ -197,13 +188,11 @@ async def hello(ctx):
 async def fuckyoubot(ctx):
     await ctx.send("Fuck you too!")
 
-
-
 @bot.command(pass_context = True)
 async def ping(ctx, member : discord.Member, freq = 1):
     """pings user number of times"""
     try:
-        top_id = str(ctx.message.author.top_role.id)
+        top_id = ctx.message.author.top_role.id
         if not top_id == ADMIN_ID:
             await ctx.send("You do not have permission to do that.")
             return
@@ -218,14 +207,14 @@ async def ping(ctx, member : discord.Member, freq = 1):
 # @bot.command(pass_context = True)
 # async def play(ctx, member, )
 
-
-
 @bot.command(pass_context = True)
 async def insult(ctx, member : discord.Member = None, tts = None):
     """insults given user with preset insults"""
     try:
-        role = str(ctx.message.author.top_role);
-        # if not role == "What Is Plagiarism" or not role == "Fig"  
+        top_id = ctx.message.author.top_role.id
+        if top_id == EVERYONE_ID:
+            await ctx.send("You need a role to do that.")
+            return
         possible_responses = [
             # "I don't speak to idiots",
             # "Fuck you too {0.mention}",
@@ -252,19 +241,15 @@ async def insult(ctx, member : discord.Member = None, tts = None):
     except:
         await ctx.send("Error.")
 
-# @bot.command(pass_context = True)
-# async def insult(ctx, member : discord.Member = None):
-#     if member == None:
-#         member = ctx.message.author
-#     await ctx.send("Fuck you {0.mention}".format(member))
-
 @bot.command(pass_context = True)
 # @commands.check(is_admin)
 async def test(ctx):
     await ctx.send(str(ctx.message.author.top_role))
 
 
-vc = None
+#
+# AUDIO FUNCTIONS
+#
 
 @bot.group(pass_context = True)
 async def music(ctx):
@@ -273,12 +258,28 @@ async def music(ctx):
         await ctx.send("Invalid subcommand.")
 
 @music.command(pass_context = True)
-async def connect(ctx):
+async def connect(ctx, target = None):
     """connects to voice channel of user"""
     try:
         global vc
+        global audio_controller
+        voice_channel = None
         author = ctx.message.author
-        voice_channel = author.voice.channel
+
+        if audio_controller is None:
+            audio_controller = author
+        else:
+            await ctx.send("Someone has already summoned the bot to play audio!")
+            return
+
+        if target is None:
+            voice_channel = author.voice.channel
+        else:
+            voice_channel = discord.utils.get(author.guild.voice_channels, name = target)
+
+        if voice_channel is None:
+            await ctx.send("Failed to connect to target channel.")
+            return
 
         if vc is not None:
             await vc.disconnect()
@@ -287,19 +288,23 @@ async def connect(ctx):
     except:
         await ctx.send("Error.")
 
-
 @music.command(pass_context = True)
 async def play(ctx, url):
     """plays given Youtube url"""
     try:
         global vc
+        global audio_controller
+
+        if audio_controller is not None:
+            await ctx.send("Someone has already summoned the bot to play audio!")
+            return
 
         if vc is None:
             await ctx.send("No Voice Client detected.")
             return
-        # author = ctx.message.author
-        # voice_channel = author.voice.channel
         # discord.opus.load_opus('opus')
+
+        # Found on StackOverflow
         opts = {}
         with youtube_dl.YoutubeDL(opts) as ydl:
             song_info = ydl.extract_info(url, download = False)
@@ -328,6 +333,12 @@ async def play(ctx, url):
 async def pause(ctx):
     """pauses audio"""
     global vc
+    global audio_controller
+
+    if audio_controller is not None:
+        await ctx.send("Someone has already summoned the bot to play audio!")
+        return
+
     if vc is None or not vc.is_playing():
         await ctx.send("Nothing is playing.")
         return
@@ -337,6 +348,12 @@ async def pause(ctx):
 async def resume(ctx):
     """resumes audio"""
     global vc
+    global audio_controller
+
+    if audio_controller is not None:
+        await ctx.send("Someone has already summoned the bot to play audio!")
+        return
+
     if vc is None or not vc.is_paused():
         await ctx.send("Nothing is paused.")
         return
@@ -346,6 +363,12 @@ async def resume(ctx):
 async def stop(ctx):
     """stops playing"""
     global vc
+    global audio_controller
+
+    if audio_controller is not None:
+        await ctx.send("Someone has already summoned the bot to play audio!")
+        return
+
     if vc is None and not vc.is_playing():
         await ctx.send("Nothing is playing.")
         return
@@ -355,23 +378,60 @@ async def stop(ctx):
 async def volume(ctx, vol):
     """adjusts volume between 0 to 10 inclusive"""
     global vc
-    if not vc.is_playing or not vc.is_paused:
-        await ctx.send("Nothing is playing or paused.")
-        return
+    global audio_controller
+    top_id = ctx.message.author.top_role.id
+
     if vol > 10 or vol < 0:
         await ctx.send("Please enter a number between 0 and 10")
         return
+
+    if audio_controller is not None:
+        if top_id != ADMIN_ID:
+            await ctx.send("Someone else is controlling the bot's audio at the moment.")
+            return
+
+    if not vc.is_playing or not vc.is_paused:
+        await ctx.send("Nothing is playing or paused.")
+        return
+    
     vc.source.volume = vol / 10
 
 @music.command(pass_context = True)
 async def dc(ctx):
     """disconnects voice client"""
     global vc
+    global audio_controller
+
+    if audio_controller is not None:
+        await ctx.send("You can't disconnect someone else's audio.")
+        return
+
     if vc is None:
         await ctx.send("Nothing to disconnect.")
         return
     await vc.disconnect()
     await ctx.send("Disconnected voice client.")
+
+@music.command(pass_context = True)
+async def forcedc(ctx):
+    global vc
+
+    top_id = ctx.message.author.top_role.id
+    if not top_id == ADMIN_ID:
+        await ctx.send("You do not have permission to do that.")
+        return
+
+    if vc is None:
+        await ctx.send("Nothing to disconnect.")
+        return
+    else:
+        await vc.disconnect()
+        await ctx.send("Disconnected voice client.")
+
+#
+#
+#
+#
 
 @bot.event  
 async def on_ready():
