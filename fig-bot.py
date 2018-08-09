@@ -192,7 +192,7 @@ async def fuckyoubot(ctx):
 async def ping(ctx, member : discord.Member, freq = 1):
     """pings user number of times"""
     try:
-        top_id = ctx.message.author.top_role.id
+        top_id = str(ctx.message.author.top_role.id)
         if not top_id == ADMIN_ID:
             await ctx.send("You do not have permission to do that.")
             return
@@ -211,7 +211,7 @@ async def ping(ctx, member : discord.Member, freq = 1):
 async def insult(ctx, member : discord.Member = None, tts = None):
     """insults given user with preset insults"""
     try:
-        top_id = ctx.message.author.top_role.id
+        top_id = str(ctx.message.author.top_role.id)
         if top_id == EVERYONE_ID:
             await ctx.send("You need a role to do that.")
             return
@@ -308,7 +308,7 @@ async def play(ctx, url):
         # discord.opus.load_opus('opus')
 
         # Found on StackOverflow
-        opts = {}
+        opts = {'format': 'bestaudio/best'}
         with youtube_dl.YoutubeDL(opts) as ydl:
             song_info = ydl.extract_info(url, download = False)
         if 'entries' in song_info:
@@ -319,10 +319,11 @@ async def play(ctx, url):
             video = song_info 
         # print(video)
         video_url = "youtube.com/watch?v=" + video['id']
-        audio_url = video['formats'][1].get('url')
-        print(audio_url)    
+        audio_url = video['formats'][0].get('url')
+        # print(video['formats'])    
 
         # vc = await voice_channel.connect()
+        options = ["-hq", "-ab 320"]
         vc.play(discord.FFmpegPCMAudio(audio_url), after=lambda e: print('done', e))
         vc.source = discord.PCMVolumeTransformer(vc.source)
         vc.source.volume = 0.2
@@ -396,7 +397,7 @@ async def volume(ctx, vol):
         return
 
     if audio_controller is not None:
-        if top_id != ADMIN_ID:
+        if str(top_id) != ADMIN_ID:
             await ctx.send("Someone else is controlling the bot's audio at the moment.")
             return
         if author is not audio_controller:
@@ -407,7 +408,7 @@ async def volume(ctx, vol):
         await ctx.send("Nothing is playing or paused.")
         return
     
-    vc.source.volume = vol / 10
+    vc.source.volume = int(vol) / 10
 
 @music.command(pass_context = True)
 async def dc(ctx):
