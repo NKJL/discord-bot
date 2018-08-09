@@ -433,7 +433,7 @@ async def forcedc(ctx):
     author = ctx.message.author
     top_id = author.top_role.id
 
-    if not top_id == ADMIN_ID:
+    if top_id != ADMIN_ID:
         await ctx.send("You do not have permission to do that.")
         return
 
