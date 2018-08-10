@@ -1,11 +1,13 @@
 import discord
-import random
 import asyncio
 import unicodedata
 import youtube_dl
+import random
+
 from discord.ext import commands
 from discord.utils import get
 from utils import *
+from proflib import * # custom profanity filter list
 
 ADMIN_ID = "449356221040820235"             # Role ID for admin
 EVERYONE_ID = "191048044706398208"          # Role ID for @everyone
@@ -13,8 +15,10 @@ ADMIN_PERMISSIONS_VALUE = "2080898303"      # Permission value in beg-bug for ad
 
 
 bot = commands.Bot(command_prefix = "!", description = "I am a bot.") # Bot
+bot.remove_command('help')
 vc = None   # VoiceClient
 audio_controller = None # current user controlling audio
+lock = False
 
 filterp = "off" # tracks profanity filter
 
@@ -31,7 +35,7 @@ async def filterswitch(ctx, switch):
             await ctx.send("Specifiy on or off.")
             return
         filterp = switch
-        await ctx.send("filterp is currently " + filterp)
+        await ctx.send("filter is currently " + filterp)
     except:
         await ctx.send("Error.")
 
@@ -46,16 +50,18 @@ async def on_message(message):
         if message.author.bot:
             return
         else:
-            if filterp == "on":
-                if "fuck" in message.content.lower():
-                    channel = message.channel
-                    await message.add_reaction("\U0001F632")
-                    possible_responses = [
-                        "This is a hecking Christian server.",
-                        "No cursing in this wholesome server you heathen.",
-                        "Do you kiss your mother with that mouth?"
-                    ]
-                    await channel.send(random.choice(possible_responses))
+            if filterp == "on":                                 # profanity filter and currently only works on words and not phrases
+                to_filter = message.content.lower().split()
+                for word in to_filter:
+                    if word in profanity_list:
+                        channel = message.channel
+                        await message.add_reaction("\U0001F632")
+                        possible_responses = [
+                            "Watch your language!",
+                            "Do you kiss your mother with that mouth?",
+                            "No dirty words in this wholesome server!"
+                        ]
+                        await channel.send(random.choice(possible_responses))
             else:
                 return
     except:
@@ -65,12 +71,14 @@ async def on_message(message):
 async def checkprivilege(ctx, member : discord.Member):
     # await ctx.send("This member has the following roles: " + str(member.roles))
     # await ctx.send("The server has the following roles: " + str(ctx.guild.roles))
-    await ctx.send(str(member.guild.text_channels))
+    # await ctx.send(str(member.guild.text_channels))
     channel = discord.utils.get(ctx.guild.text_channels, name = "beg-bug")
     await ctx.send(str(member.permissions_in(channel)))
 
 #
+#
 # ADMINISTRATIVE 
+#
 #
 
 @bot.command(pass_context = True)
@@ -158,10 +166,27 @@ async def vkick(ctx, member : discord.Member):
     except:
         await ctx.send("Error.")
 
-
+#
 #
 # MISC. FUNCTIONS
 #
+#
+
+@bot.command(pass_context = True)
+async def dice(ctx):
+    """dice roll"""
+    repeat = True
+    while repeat:
+        await ctx.send("You rolled " + str(random.randint(1, 6)))
+        await ctx.send("Do you want to roll again? y/n")
+        def check(m):
+            return m.channel == ctx.message.channel and m.author == ctx.message.author
+        try:
+            msg = await bot.wait_for('message', check = check, timeout = 20)
+            if msg.content != 'y':
+                repeat = False
+        except asyncio.TimeoutError:
+            return
 
 @bot.command(pass_context = True)
 async def tts(ctx, message : str, channel : str = None):
@@ -204,9 +229,6 @@ async def ping(ctx, member : discord.Member, freq = 1):
     except:
         await ctx.send("Error.")
 
-# @bot.command(pass_context = True)
-# async def play(ctx, member, )
-
 @bot.command(pass_context = True)
 async def insult(ctx, member : discord.Member = None, tts = None):
     """insults given user with preset insults"""
@@ -242,22 +264,33 @@ async def insult(ctx, member : discord.Member = None, tts = None):
         await ctx.send("Error.")
 
 @bot.command(pass_context = True)
+async def reqrole(ctx, role_name = None):
+    """alerts admin that someone requests role"""
+    if role_name == None:
+        await ctx.send("Please enter the name (in quotes) of the role you would like to receive.")
+        return
+    author = ctx.message.author
+    admin_channel = discord.utils.get(ctx.message.guild.text_channels, name = "magnum-dong")
+    await admin_channel.send(author.name + " has requested the role of " + role_name)
+
+@bot.command(pass_context = True)
 # @commands.check(is_admin)
 async def test(ctx):
     await ctx.send(str(ctx.message.author.top_role))
 
-
+#
 #
 # AUDIO FUNCTIONS
 #
+#
 
 @bot.group(pass_context = True)
-async def music(ctx):
-    """music players"""
+async def audio(ctx):
+    """audio players"""
     if ctx.invoked_subcommand is None:
         await ctx.send("Invalid subcommand.")
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def connect(ctx, target = None):
     """connects to voice channel of user"""
     try:
@@ -289,7 +322,7 @@ async def connect(ctx, target = None):
     except:
         await ctx.send("Error.")
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def play(ctx, url):
     """plays given Youtube url"""
     try:
@@ -333,7 +366,7 @@ async def play(ctx, url):
     except:
         await ctx.send("Error.")
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def pause(ctx):
     """pauses audio"""
     global vc
@@ -341,8 +374,8 @@ async def pause(ctx):
     author = ctx.message.author
 
     if audio_controller is not None:
-        if author is not audio_controller:
-            await ctx.send("Someone has already summoned the bot to play audio!")
+        if author is not audio_controller and lock:
+            await ctx.send("Controls are locked.")
             return
 
     if vc is None or not vc.is_playing():
@@ -350,7 +383,7 @@ async def pause(ctx):
         return
     vc.pause()
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def resume(ctx):
     """resumes audio"""
     global vc
@@ -358,8 +391,8 @@ async def resume(ctx):
     author = ctx.message.author
 
     if audio_controller is not None:
-        if author is not audio_controller:
-            await ctx.send("Someone has already summoned the bot to play audio!")
+        if author is not audio_controller and lock:
+            await ctx.send("Controls are locked.")
             return
 
     if vc is None or not vc.is_paused():
@@ -367,7 +400,7 @@ async def resume(ctx):
         return
     vc.resume()
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def stop(ctx):
     """stops playing"""
     global vc
@@ -375,8 +408,8 @@ async def stop(ctx):
     author = ctx.message.author
 
     if audio_controller is not None:
-        if author is not audio_controller:
-            await ctx.send("Someone has already summoned the bot to play audio!")
+        if author is not audio_controller and lock:
+            await ctx.send("Controls are locked.")
             return
 
     if vc is None and not vc.is_playing():
@@ -384,7 +417,7 @@ async def stop(ctx):
         return
     vc.stop()
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def volume(ctx, vol):
     """adjusts volume between 0 to 10 inclusive"""
     global vc
@@ -397,10 +430,7 @@ async def volume(ctx, vol):
         return
 
     if audio_controller is not None:
-        if str(top_id) != ADMIN_ID:
-            await ctx.send("Someone else is controlling the bot's audio at the moment.")
-            return
-        if author is not audio_controller:
+        if str(top_id) != ADMIN_ID and (author is not audio_controller):
             await ctx.send("Someone else is controlling the bot's audio at the moment.")
             return
 
@@ -410,7 +440,7 @@ async def volume(ctx, vol):
     
     vc.source.volume = int(vol) / 10
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def dc(ctx):
     """disconnects voice client"""
     global vc
@@ -426,9 +456,11 @@ async def dc(ctx):
         await ctx.send("Nothing to disconnect.")
         return
     await vc.disconnect()
+    vc = None
+    audio_controller = None
     await ctx.send("Disconnected voice client.")
 
-@music.command(pass_context = True)
+@audio.command(pass_context = True)
 async def forcedc(ctx):
     global vc
     author = ctx.message.author
@@ -443,8 +475,45 @@ async def forcedc(ctx):
         return
     else:
         await vc.disconnect()
+        vc = None
+        audio_controller = None
         await ctx.send("Disconnected voice client.")
 
+@audio.command(pass_context = True)
+async def lock(ctx):
+    """locks control of audio to audio_controller and admin"""
+    global lock
+    lock = True
+    author = ctx.message.author
+    top_id = author.top_role.id
+
+    if audio_controller is not None:
+        if str(top_id) != ADMIN_ID and (author is not audio_controller):
+            await ctx.send("Only the person who summoned the bot or an admin can lock the controls.")
+            return
+    else:
+        await ctx.send("No one is controlling audio at the moment.")
+        return
+
+    await ctx.send("Audio locked to controller and admin.")
+
+@audio.command(pass_context = True)
+async def unlock(ctx):
+    """unlocks control of audio"""
+    global lock
+    lock = False
+    author = ctx.message.author
+    top_id = author.top_role.id
+
+    if audio_controller is not None:
+        if str(top_id) != ADMIN_ID and (author is not audio_controller):
+            await ctx.send("Only the person who summoned the bot or an admin can unlock the controls.")
+            return
+    else:
+        await ctx.send("No one is controlling audio at the moment.")
+        return
+
+    await ctx.send("Audio unlocked for everyone.")
 #
 #
 #
@@ -462,6 +531,51 @@ async def add(ctx,
     left : int, right : int):
     """Adds two numbers together."""
     await ctx.send(left + right)
+
+#
+#
+#
+
+help_msg = """  ``` 
+AUDIO
+----------
+!audio connect    
+!audio connect <channel name in quotes> 
+!audio play <YouTube link> 
+!audio pause
+!audio resume
+!audio stop
+!audio dc 
+!audio lock 
+!audio unlock 
+\n
+MISC
+----------
+!reqrole <role name>
+!dice
+!tts <message in quotes> <channel in quotes> 
+!insult <@member> 
+!insult <@member> tts
+!hello
+!fuckyoubot
+\n
+ADMIN
+----------
+!addrole <@member> <role name in quotes>
+!removerole <@member> <role name in quotes>
+!createvc <name>
+!deletevc <name>
+!vkick <@member>
+!ping <@member> <frequence < 10>``` \
+"""
+
+@bot.command(pass_context = True)
+async def help(ctx):
+    global help_msg
+    await ctx.send(help_msg)
+#
+#
+#
 
 bot.run('')
 
