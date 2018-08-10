@@ -3,4 +3,5 @@
 *.lnk
 __pycache__/
 .pyc
-plugins/keys.py/
+keys.py/
+opus-1.2.1/
