@@ -4,6 +4,7 @@ import unicodedata
 import random
 import re
 
+from plugins import keys as tokens
 from discord.ext import commands
 from discord.utils import get
 from utils import *
@@ -20,6 +21,7 @@ bot.remove_command('help')
 bot.load_extension('plugins.test')
 bot.load_extension('plugins.audio')
 bot.load_extension('plugins.reddit')
+bot.load_extension('plugins.randchoice')
 
 filterp = "off" # tracks profanity filter
 
@@ -352,7 +354,7 @@ async def help(ctx):
 #
 #
 
-bot.run('')
+bot.run(tokens.token)
 
 
 
