@@ -3,3 +3,4 @@
 *.lnk
 __pycache__/
 .pyc
+plugins/keys.py/

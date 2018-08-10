@@ -18,6 +18,7 @@ bot.remove_command('help')
 
 bot.load_extension('plugins.test')
 bot.load_extension('plugins.audio')
+bot.load_extension('plugins.reddit')
 
 filterp = "off" # tracks profanity filter
 
@@ -347,7 +348,7 @@ async def help(ctx):
 #
 #
 
-bot.run('')
+bot.run('NDU2Nzg2MjI2NzQyMTY1NTI3.DkxuFw.QDPpPTTNSp4sJc4cY2clEvdeywE')
 
 
 
