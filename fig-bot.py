@@ -2,6 +2,7 @@ import discord
 import asyncio
 import unicodedata
 import random
+import re
 
 from discord.ext import commands
 from discord.utils import get
@@ -173,20 +174,29 @@ async def vkick(ctx, member : discord.Member):
 #
 
 @bot.command(pass_context = True)
-async def dice(ctx):
+async def dice(ctx, xdx):
     """dice roll"""
-    repeat = True
-    while repeat:
-        await ctx.send("You rolled " + str(random.randint(1, 6)))
-        await ctx.send("Do you want to roll again? y/n")
-        def check(m):
-            return m.channel == ctx.message.channel and m.author == ctx.message.author
-        try:
-            msg = await bot.wait_for('message', check = check, timeout = 20)
-            if msg.content != 'y':
-                repeat = False
-        except asyncio.TimeoutError:
-            return
+    match = '[1-9]d[1-9][0-9]*'
+    match_obj = re.match(match, xdx)
+    if match_obj == None:
+        await ctx.send("Format your roll like 2d6 or 1d20.")
+        return
+
+    num_dice = int(xdx.split('d')[0])
+    sides = int(xdx.split('d')[1])
+    if sides > 99:
+        await ctx.send("Sides cannot exceed 99.")
+        return
+
+    roll_values = []
+    for i in range(0, num_dice):
+        roll_values.append(random.randint(1, sides))
+
+    str_rolls = str(roll_values)
+    str_sum = str(sum(roll_values))
+
+    await ctx.send(f"You rolled:\n{str_rolls}\nSum is {str_sum}.")
+        
 
 @bot.command(pass_context = True)
 async def tts(ctx, message : str, channel : str = None):
@@ -278,17 +288,6 @@ async def reqrole(ctx, role_name = None):
 async def test(ctx):
     await ctx.send(str(ctx.message.author.top_role))
 
-#
-#
-# AUDIO FUNCTIONS
-#
-#
-
-
-#
-#
-#
-#
 
 @bot.event  
 async def on_ready():
@@ -319,6 +318,11 @@ AUDIO
 !audio dc 
 !audio lock 
 !audio unlock 
+\n
+REDDIT
+----------
+!reddit d2w
+!reddit d2d
 \n
 MISC
 ----------
