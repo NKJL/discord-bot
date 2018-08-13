@@ -2,6 +2,7 @@ import asyncio
 import youtube_dl
 import discord
 
+from collections import deque
 from discord.ext import commands
 from discord.utils import get
 
@@ -9,9 +10,15 @@ ADMIN_ID = "449356221040820235"             # Role ID for admin
 EVERYONE_ID = "191048044706398208"          # Role ID for @everyone
 ADMIN_PERMISSIONS_VALUE = "2080898303"      # Permission value in beg-bug for admin
 
-vc = None
-audio_controller = None
-lock = False
+player = None
+
+class AudioPlayer:
+	"""A PLAYER OF AUDIO"""
+	def __init__(self, voice_client, controller, queue):
+		self.voice_client = voice_client
+		self.audio_controller = controller
+		self.queue = queue
+		self.lock = False
 
 class Audio:
 	"""Audio plugin to play Youtube links."""
@@ -28,17 +35,15 @@ class Audio:
 	async def connect(self, ctx, target = None):
 		"""connects to voice channel of user"""
 		try:
-			global vc
-			global audio_controller
 			voice_channel = None
+			global player
 			author = ctx.message.author
 
-			if audio_controller is None:
-				audio_controller = author
-			else:
-				if author is not audio_controller:
+			if player is not None:
+				if author is not player.audio_controller:
 					await ctx.send("Someone has already summoned the bot to play audio!")
 					return
+				await player.vc.disconnect()
 
 			if target is None:
 				voice_channel = author.voice.channel
@@ -49,110 +54,127 @@ class Audio:
 				await ctx.send("Failed to connect to target channel.")
 				return
 
-			if vc is not None:
-				await vc.disconnect()
 			vc = await voice_channel.connect()
+			player = AudioPlayer(vc, author, deque([]))
 			await ctx.send("Connected to voice channel.")
 		except:
 			await ctx.send("Error.")
 
 	@audio.command(pass_context = True)
-	async def play(self, ctx, url):
+	async def play(self, ctx, url = None):
 		"""plays given Youtube url"""
-		global vc
-		global audio_controller
+		global player
 		author = ctx.message.author
 
-		if audio_controller is not None:
-			if author is not audio_controller:
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
+			return
+
+		if player.audio_controller is not None:
+			if author is not player.audio_controller and player.lock:
 				await ctx.send("Someone has already summoned the bot to play audio!")
 				return
 			
-		if vc is None:
-			await ctx.send("No Voice Client detected.")
-			return
-		# discord.opus.load_opus('opus')
-
-		# Found on StackOverflow
-		opts = {'format': 'bestaudio/best'}
-		with youtube_dl.YoutubeDL(opts) as ydl:
-			song_info = ydl.extract_info(url, download = False)
-		if 'entries' in song_info:
-			# Can be a playlist or a list of videos
-			video = song_info['entries'][0]
+		if url is None:
+			if len(player.queue) == 0:
+				await ctx.send("Nothing in queue.")
+				return
+			pass
 		else:
-			# Just a video
-			video = song_info 
-		# print(video)
-		video_url = "youtube.com/watch?v=" + video['id']
-		audio_url = video['formats'][0].get('url')
-		# print(video['formats'])    
+			# Found on StackOverflow
+			opts = {
+			    'format': 'bestaudio/best',
+			    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+			    'restrictfilenames': True,
+			    'noplaylist': True,
+			    'nocheckcertificate': True,
+			    'ignoreerrors': False,
+			    'logtostderr': False,
+			    'no_warnings': True,
+			    'default_search': 'auto',
+			}
 
-		# vc = await voice_channel.connect()
-		options = ["-hq", "-ab 320"]
-		vc.play(discord.FFmpegPCMAudio(audio_url), after=lambda e: print('done', e))
+			ffmpeg_options = {
+				'before_options': '-nostdin',
+				'options': '-vn'
+			}
+
+			with youtube_dl.YoutubeDL(opts) as ydl:
+				song_info = ydl.extract_info(url, download = False)
+			if 'entries' in song_info:
+				# Can be a playlist or a list of videos
+				video = song_info['entries'][0]
+			else:
+				# Just a video
+				video = song_info 
+			if video is None:
+				await ctx.send("Failed to acquire audio source.")
+				return
+			# print(video)
+			video_url = "youtube.com/watch?v=" + video['id']
+			audio_url = video['formats'][4].get('url')
+			# audio_url = video['url']
+			# print(video['formats'])    
+			player.queue.append(audio_url)
+		to_play = player.queue.popleft()
+
+		vc = player.voice_client
+		vc.play(discord.FFmpegPCMAudio(to_play, **ffmpeg_options), after=lambda e: print('done', e))
 		vc.source = discord.PCMVolumeTransformer(vc.source)
-		vc.source.volume = 0.2
-
-		# player = await vc.create_ytdl_player(url)
-		# player.start()
+		vc.source.volume = 0.3
 
 	@audio.command(pass_context = True)
 	async def pause(self, ctx):
 		"""pauses audio"""
-		global vc
-		global audio_controller
+		global player
 		author = ctx.message.author
 
-		if audio_controller is not None:
-			if author is not audio_controller and lock:
-				await ctx.send("Controls are locked.")
-				return
-
-		if vc is None or not vc.is_playing():
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
+			return
+		if not player.voice_client.is_playing():
 			await ctx.send("Nothing is playing.")
 			return
-		vc.pause()
+		if author is not player.audio_controller and player.lock:
+			await ctx.send("Controls are locked.")
+			return
+		player.voice_client.pause()
 
 	@audio.command(pass_context = True)
 	async def resume(self, ctx):
 		"""resumes audio"""
-		global vc
-		global audio_controller
+		global player
 		author = ctx.message.author
 
-		if audio_controller is not None:
-			if author is not audio_controller and lock:
-				await ctx.send("Controls are locked.")
-				return
-
-		if vc is None or not vc.is_paused():
-			await ctx.send("Nothing is paused.")
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
 			return
-		vc.resume()
+		if not player.voice_client.is_paused():
+			await ctx.send("Nothing is paused.")	
+			return
+		if author is not player.audio_controller and player.lock:
+			await ctx.send("Controls are locked.")
+			return
+		player.voice_client.resume()
 
 	@audio.command(pass_context = True)
 	async def stop(self, ctx):
 		"""stops playing"""
-		global vc
-		global audio_controller
+		global player
 		author = ctx.message.author
 
-		if audio_controller is not None:
-			if author is not audio_controller and lock:
-				await ctx.send("Controls are locked.")
-				return
-
-		if vc is None and not vc.is_playing():
-			await ctx.send("Nothing is playing.")
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
 			return
-		vc.stop()
+		if author is not player.audio_controller and player.lock:
+			await ctx.send("Controls are locked.")
+			return
+		player.voice_client.stop()
 
 	@audio.command(pass_context = True)
 	async def volume(self, ctx, vol):
 		"""adjusts volume between 0 to 10 inclusive"""
-		global vc
-		global audio_controller
+		global player
 		author = ctx.message.author
 		top_id = author.top_role.id
 
@@ -160,40 +182,39 @@ class Audio:
 			await ctx.send("Please enter a number between 0 and 10")
 			return
 
-		if audio_controller is not None:
-			if str(top_id) != ADMIN_ID and (author is not audio_controller):
-				await ctx.send("Someone else is controlling the bot's audio at the moment.")
-				return
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
+			return
+		if str(top_id) != ADMIN_ID and (author is not player.audio_controller):
+			await ctx.send("Someone else is controlling the bot's audio at the moment.")
+			return
 
-		if not vc.is_playing or not vc.is_paused:
+		if not player.voice_client.is_playing and not player.voice_client.is_paused:
 			await ctx.send("Nothing is playing or paused.")
 			return
 		
-		vc.source.volume = int(vol) / 10
+		player.voice_client.source.volume = int(vol) / 10
 
 	@audio.command(pass_context = True)
 	async def dc(self, ctx):
 		"""disconnects voice client"""
-		global vc
-		global audio_controller
+		global player
 		author = ctx.message.author
 
-		if audio_controller is not None:
-			if author is not audio_controller:
-				await ctx.send("You can't disconnect someone else's audio.")
-				return
-
-		if vc is None:
+		if player is None:
 			await ctx.send("Nothing to disconnect.")
 			return
-		await vc.disconnect()
-		vc = None
-		audio_controller = None
+		if author is not player.audio_controller:
+			await ctx.send("You can't disconnect someone else's audio.")
+			return
+
+		await player.voice_client.disconnect()
+		player = None
 		await ctx.send("Disconnected voice client.")
 
 	@audio.command(pass_context = True)
 	async def forcedc(self, ctx):
-		global vc
+		global player
 		author = ctx.message.author
 		top_id = author.top_role.id
 
@@ -201,50 +222,119 @@ class Audio:
 			await ctx.send("You do not have permission to do that.")
 			return
 
-		if vc is None:
+		if player is None:
 			await ctx.send("Nothing to disconnect.")
 			return
 		else:
-			await vc.disconnect()
-			vc = None
-			audio_controller = None
+			await player.voice_client.disconnect()
+			player = None
 			await ctx.send("Disconnected voice client.")
+
+	@audio.command(pass_context = True)
+	async def add(self, ctx, YT_link = None):
+		global player
+
+		if player is None:
+			await ctx.send("Nothing to disconnect.")
+			return
+		if YT_link is None:
+			await ctx.send("Please enter a valid YouTube link.")
+			return
+
+		opts = {
+			    'format': 'bestaudio/best',
+			    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+			    'restrictfilenames': True,
+			    'noplaylist': True,
+			    'nocheckcertificate': True,
+			    'ignoreerrors': False,
+			    'logtostderr': False,
+			    'no_warnings': True,
+			    'default_search': 'auto',
+			}
+
+		with youtube_dl.YoutubeDL(opts) as ydl:
+			song_info = ydl.extract_info(YT_link, download = False)
+		if 'entries' in song_info:
+			# Can be a playlist or a list of videos
+			video = song_info['entries'][0]
+		else:
+			# Just a video
+			video = song_info 
+		if video is None:
+			await ctx.send("Failed to acquire audio source.")
+			return
+		video_url = "youtube.com/watch?v=" + video['id']
+		title = video['title']
+		audio_url = video['formats'][4].get('url')
+		player.queue.append(audio_url)
+		await ctx.send(f"Added {title} to queue.")
+
+
+	@audio.command(pass_context = True)
+	async def next(self, ctx):
+		global player
+		author = ctx.message.author
+
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
+			return
+		if author is not player.audio_controller and player.lock:
+			await ctx.send("Controls are locked.")
+			return
+		if len(player.queue) == 0:
+			await ctx.send("Queue is empty.")
+			return
+
+		vc = player.voice_client
+		if vc.is_playing() or vc.is_paused():
+			vc.stop()
+		to_play = player.queue.popleft()
+
+		ffmpeg_options = {
+				'before_options': '-nostdin',
+				'options': '-vn'
+			}
+
+		vc.play(discord.FFmpegPCMAudio(to_play, **ffmpeg_options), after=lambda e: print('done', e))
+		vc.source = discord.PCMVolumeTransformer(vc.source)
+		vc.source.volume = 0.4
 
 	@audio.command(pass_context = True)
 	async def lock(self, ctx):
 		"""locks control of audio to audio_controller and admin"""
-		global lock
-		lock = True
+		global player
 		author = ctx.message.author
 		top_id = author.top_role.id
 
-		if audio_controller is not None:
-			if str(top_id) != ADMIN_ID and (author is not audio_controller):
-				await ctx.send("Only the person who summoned the bot or an admin can lock the controls.")
-				return
-		else:
-			await ctx.send("No one is controlling audio at the moment.")
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
 			return
+
+		if str(top_id) != ADMIN_ID and (author is not player.audio_controller):
+			await ctx.send("Only the person who summoned the bot or an admin can lock the controls.")
+			return
+		player.lock = True
 
 		await ctx.send("Audio locked to controller and admin.")
 
 	@audio.command(pass_context = True)
 	async def unlock(self, ctx):
 		"""unlocks control of audio"""
-		global lock
-		lock = False
+		global player
 		author = ctx.message.author
 		top_id = author.top_role.id
 
-		if audio_controller is not None:
-			if str(top_id) != ADMIN_ID and (author is not audio_controller):
-				await ctx.send("Only the person who summoned the bot or an admin can unlock the controls.")
-				return
-		else:
-			await ctx.send("No one is controlling audio at the moment.")
+		if player is None:
+			await ctx.send("No VoiceClient detected.")
 			return
 
-		await ctx.send("Audio unlocked for everyone.")
+		if str(top_id) != ADMIN_ID and (author is not player.audio_controller):
+			await ctx.send("Only the person who summoned the bot or an admin can lock the controls.")
+			return
+		player.lock = False
+
+		await ctx.send("Audio unlocked to controller and admin.")
 
 def setup(bot):
 	bot.add_cog(Audio(bot))

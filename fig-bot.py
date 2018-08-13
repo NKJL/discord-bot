@@ -317,6 +317,8 @@ AUDIO
 !audio pause
 !audio resume
 !audio stop
+!audio add <YouTube link>
+!audio next
 !audio dc 
 !audio lock 
 !audio unlock 
@@ -325,6 +327,12 @@ REDDIT
 ----------
 !reddit d2w
 !reddit d2d
+\n
+RANDCHOICE
+----------
+!randchoice setup <number = 1>
+!randchoice add <option>
+!randchoice select
 \n
 MISC
 ----------
