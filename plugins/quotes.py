@@ -24,6 +24,7 @@ class Quotes:
 			await ctx.send("Enter valid quote string (in quotes).") 
 			return
 		iterator = ctx.message.channel.history(limit = 10, before = ctx.message)
+		time = None
 		count = 0
 		found = False
 		while count < 10:
@@ -31,6 +32,7 @@ class Quotes:
 			# print(msg)
 			if msg.content == quote:
 				found = True
+				time = msg.created_at
 				break
 			count += 1
 		# prev_content = [x.content for x in prev_msgs]
@@ -42,7 +44,8 @@ class Quotes:
 		username = user.name
 		if username not in data:
 			data[username] = []
-		data[username].append({'content' : quote, 'time' : str(dt.datetime.now())})
+		index = len(data[username])
+		data[username].append({'content' : quote, 'time' : str(time), 'index': index})
 		write_json(data)
 		await ctx.send("Added to data file.")
 
@@ -57,12 +60,13 @@ class Quotes:
 		username = user.name
 		if username not in data:
 			data[username] = []
-		data[username].append({'content' : quote, 'time' : str(dt.datetime.now())})
+		index = len(data[username])
+		data[username].append({'content' : quote, 'time' : str(dt.datetime.now()), 'index': index})
 		write_json(data)
 		await ctx.send("Added to data file.")
 
 	@quotes.command(pass_context = True)
-	async def quote(self, ctx, user : discord.Member = None):
+	async def quote(self, ctx, user : discord.Member = None, index = None):
 		"""Finds a random quote by user"""
 		if user is None:
 			await ctx.send("Enter valid user (mention).")
@@ -72,10 +76,30 @@ class Quotes:
 			await ctx.send("No data for mentioned user.")
 			return
 		quote_list = data[username]
-		quoted = quote_list[random.randint(0, len(quote_list) - 1)]
+		quoted = None
+		if index is None:
+			quoted = quote_list[random.randint(0, len(quote_list) - 1)]
+		else:
+			quoted = quote_list[int(index)]
 		content = quoted['content']
 		quote_date = quoted['time'].split()[0]
 		await ctx.send(f"On {quote_date}, {username} sent\n```{content}```")
+
+	@quotes.command(pass_context = True)
+	async def reqquotes(self, ctx, user : discord.Member):
+		"""DMs author a list of quotes by user"""
+		author = ctx.message.author
+		if user is None:
+			await ctx.send("Enter valid user (mention).")
+		data = load_json()
+		username = user.name
+		if username not in data:
+			await ctx.send("No data for mentioned user.")
+			return
+		quote_list = data[username]
+
+		await author.send("```" + str(quote_list) + "```")
+		await ctx.send("Quote list sent.")
 
 	@quotes.command(pass_context = True)
 	async def init(self, ctx):
