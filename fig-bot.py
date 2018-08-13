@@ -22,6 +22,7 @@ bot.load_extension('plugins.test')
 bot.load_extension('plugins.audio')
 bot.load_extension('plugins.reddit')
 bot.load_extension('plugins.randchoice')
+bot.load_extension('plugins.quotes')
 
 filterp = "off" # tracks profanity filter
 
