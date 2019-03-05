@@ -48,7 +48,7 @@ class Quotes:
 		index = len(data[user_id])
 		data[user_id].append({'content': quote, 'time': str(time), 'index': index})
 		write_json(data)
-		await ctx.send("Added to data file.")
+		await ctx.send(f"Added to data file. Index = {index}")
 
 	@quotes.command(pass_context = True)
 	async def fadd(self, ctx, user : discord.Member = None, quote = None):
@@ -64,7 +64,7 @@ class Quotes:
 		index = len(data[user_id])
 		data[user_id].append({'content' : quote, 'time' : str(dt.datetime.now()), 'index': index})
 		write_json(data)
-		await ctx.send("Added to data file.")
+		await ctx.send(f"Added to data file. Index = {index}")
 
 	@quotes.command(pass_context = True)
 	async def quote(self, ctx, user : discord.Member = None, index = None):
