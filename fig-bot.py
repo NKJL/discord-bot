@@ -131,6 +131,22 @@ async def removerole(ctx, member : discord.Member, to_remove: str = None):
         await ctx.send("Error")
 
 @bot.command(pass_context = True)
+async def reqrole(ctx, role_name = None):
+    """alerts admin that someone requests role"""
+    if role_name == None:
+        await ctx.send("Please enter the name (in quotes) of the role you would like to receive.")
+        return
+    member = ctx.message.author
+    server = ctx.message.guild
+    role = discord.utils.get(server.roles, name = role_name)
+    if role == None:
+        await ctx.send("Role not found.")
+        return
+    await member.add_roles(role)
+    admin_channel = discord.utils.get(ctx.message.guild.text_channels, name = "bot-test")
+    await admin_channel.send(member.name + " has requested the role of " + role_name)
+
+@bot.command(pass_context = True)
 async def createvc(ctx, channel_name : str):
     """creates voice channel"""
     try: 
@@ -276,15 +292,6 @@ async def insult(ctx, member : discord.Member = None, tts = None):
     except:
         await ctx.send("Error.")
 
-@bot.command(pass_context = True)
-async def reqrole(ctx, role_name = None):
-    """alerts admin that someone requests role"""
-    if role_name == None:
-        await ctx.send("Please enter the name (in quotes) of the role you would like to receive.")
-        return
-    author = ctx.message.author
-    admin_channel = discord.utils.get(ctx.message.guild.text_channels, name = "magnum-dong")
-    await admin_channel.send(author.name + " has requested the role of " + role_name)
 
 @bot.command(pass_context = True)
 # @commands.check(is_admin)
@@ -304,6 +311,10 @@ async def add(ctx,
     left : int, right : int):
     """Adds two numbers together."""
     await ctx.send(left + right)
+
+@bot.command(pass_context = True)
+async def get_id(ctx, member: discord.Member):
+    await ctx.send(member.id)
 
 #
 #

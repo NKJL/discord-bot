@@ -1,6 +1,7 @@
 import asyncio
 import youtube_dl
 import discord
+import time
 
 from collections import deque
 from discord.ext import commands
@@ -94,11 +95,6 @@ class Audio:
 			    'default_search': 'auto',
 			}
 
-			ffmpeg_options = {
-				'before_options': '-nostdin',
-				'options': '-vn'
-			}
-
 			with youtube_dl.YoutubeDL(opts) as ydl:
 				song_info = ydl.extract_info(url, download = False)
 			if 'entries' in song_info:
@@ -112,16 +108,29 @@ class Audio:
 				return
 			# print(video)
 			video_url = "youtube.com/watch?v=" + video['id']
-			audio_url = video['formats'][4].get('url')
+			audio_url = video['url']
+			title = video['title']
+			duration = video['duration']
 			# audio_url = video['url']
 			# print(video['formats'])    
-			player.queue.append(audio_url)
-		to_play = player.queue.popleft()
+			player.queue.appendleft((audio_url, title, duration))
 
-		vc = player.voice_client
-		vc.play(discord.FFmpegPCMAudio(to_play, **ffmpeg_options), after=lambda e: print('done', e))
-		vc.source = discord.PCMVolumeTransformer(vc.source)
-		vc.source.volume = 0.3
+		ffmpeg_options = {
+				'before_options': '-nostdin',
+				'options': '-vn'
+			}
+
+		while (len(player.queue) > 0):
+			popped = player.queue.popleft()
+			to_play = popped[0]
+			title = popped[1]
+			duration = int(popped[2])
+			vc = player.voice_client
+			await ctx.send("Playing:")
+			vc.play(discord.FFmpegPCMAudio(to_play, **ffmpeg_options), after=lambda e: print('done', e))
+			vc.source = discord.PCMVolumeTransformer(vc.source)
+			vc.source.volume = 0.4
+			await ctx.send(f"{title}.")
 
 	@audio.command(pass_context = True)
 	async def pause(self, ctx):
@@ -235,7 +244,7 @@ class Audio:
 		global player
 
 		if player is None:
-			await ctx.send("Nothing to disconnect.")
+			await ctx.send("No VoiceClient detected.")
 			return
 		if YT_link is None:
 			await ctx.send("Please enter a valid YouTube link.")
@@ -266,8 +275,9 @@ class Audio:
 			return
 		video_url = "youtube.com/watch?v=" + video['id']
 		title = video['title']
-		audio_url = video['formats'][4].get('url')
-		player.queue.append(audio_url)
+		duration = video['duration']
+		audio_url = video['url']
+		player.queue.append((audio_url, title, duration))
 		await ctx.send(f"Added {title} to queue.")
 
 
@@ -289,7 +299,8 @@ class Audio:
 		vc = player.voice_client
 		if vc.is_playing() or vc.is_paused():
 			vc.stop()
-		to_play = player.queue.popleft()
+		popped = player.queue.popleft()
+		to_play = popped[0]
 
 		ffmpeg_options = {
 				'before_options': '-nostdin',
@@ -298,7 +309,7 @@ class Audio:
 
 		vc.play(discord.FFmpegPCMAudio(to_play, **ffmpeg_options), after=lambda e: print('done', e))
 		vc.source = discord.PCMVolumeTransformer(vc.source)
-		vc.source.volume = 0.4
+		vc.source.volume = 0.3
 
 	@audio.command(pass_context = True)
 	async def lock(self, ctx):

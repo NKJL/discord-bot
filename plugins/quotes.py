@@ -6,6 +6,7 @@ import random
 from discord.ext import commands
 
 ADMIN_ID = "449356221040820235"             # Role ID for admin
+USER_ID = "191047293569466371"
 
 class Quotes:
 	"""Quotes engine"""
@@ -41,11 +42,11 @@ class Quotes:
 			return
 
 		data = load_json()
-		username = user.name
-		if username not in data:
-			data[username] = []
-		index = len(data[username])
-		data[username].append({'content' : quote, 'time' : str(time), 'index': index})
+		user_id = str(user.id)
+		if user_id not in data:
+			data[user_id] = []
+		index = len(data[user_id])
+		data[user_id].append({'content': quote, 'time': str(time), 'index': index})
 		write_json(data)
 		await ctx.send("Added to data file.")
 
@@ -57,11 +58,11 @@ class Quotes:
 			return
 		
 		data = load_json()
-		username = user.name
-		if username not in data:
-			data[username] = []
-		index = len(data[username])
-		data[username].append({'content' : quote, 'time' : str(dt.datetime.now()), 'index': index})
+		user_id = str(user.id)
+		if user_id not in data:
+			data[user_id] = []
+		index = len(data[user_id])
+		data[user_id].append({'content' : quote, 'time' : str(dt.datetime.now()), 'index': index})
 		write_json(data)
 		await ctx.send("Added to data file.")
 
@@ -71,19 +72,25 @@ class Quotes:
 		if user is None:
 			await ctx.send("Enter valid user (mention).")
 		data = load_json()
-		username = user.name
-		if username not in data:
+		user_id = str(user.id)
+		if user_id not in data:
 			await ctx.send("No data for mentioned user.")
 			return
-		quote_list = data[username]
+		quote_list = data[user_id]
 		quoted = None
 		if index is None:
 			quoted = quote_list[random.randint(0, len(quote_list) - 1)]
+		elif index == "-1":
+			quoted = ""
+			for i in range(0, len(quote_list)):
+				quoted += quote_list[i]["content"] + "\n"
+			await ctx.send(quoted)
+			return
 		else:
 			quoted = quote_list[int(index)]
 		content = quoted['content']
 		quote_date = quoted['time'].split()[0]
-		await ctx.send(f"On {quote_date}, {username} sent\n```{content}```")
+		await ctx.send(f"On {quote_date}, {user_id} sent\n```{content}```")
 
 	@quotes.command(pass_context = True)
 	async def reqquotes(self, ctx, user : discord.Member):
@@ -92,11 +99,13 @@ class Quotes:
 		if user is None:
 			await ctx.send("Enter valid user (mention).")
 		data = load_json()
-		username = user.name
-		if username not in data:
+		user_id = str(user.id)
+		if user_id not in data:
 			await ctx.send("No data for mentioned user.")
 			return
-		quote_list = data[username]
+		quote_list = []
+		for i in range(0, len(data[user_id])):
+			quote_list.append(data[user_id][i]["content"])
 
 		await author.send("```" + str(quote_list) + "```")
 		await ctx.send("Quote list sent.")
@@ -106,7 +115,7 @@ class Quotes:
 		author = ctx.message.author
 		top_id = author.top_role.id
 
-		if str(top_id) != ADMIN_ID:
+		if str(top_id) != ADMIN_ID or str(author.id) != USER_ID:
 			await ctx.send("You don't have permission to do this.")
 			return
 		data = {}

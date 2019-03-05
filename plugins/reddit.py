@@ -41,8 +41,9 @@ class Reddit:
 		date = '[' + str(dt.datetime.now()).split()[0] + ']'
 		dailies = list(destiny.search(f'[D2] Daily Reset Thread', time_filter = 'day'))
 		body = dailies[0].selftext
-		await ctx.send("```md\n" + body[0:(len(body) // 2)] + "```")
-		await ctx.send("```md\n" + body[(len(body) // 2):(len(body) + 1)] + "```")
+		await ctx.send("```md\n" + body[0 : (len(body) // 3)] + "```")
+		await ctx.send("```md\n" + body[(len(body) // 3) : ((len(body) // 3) * 2) + 1] + "```")
+		await ctx.send("```md\n" + body[((len(body) // 3) * 2) + 1 : len(body) + 1] + "```")
 
 def setup(bot):
 	bot.add_cog(Reddit(bot))
