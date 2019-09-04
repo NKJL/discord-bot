@@ -31,7 +31,7 @@ class Quotes:
 		while count < 10:
 			msg = await iterator.next()
 			# print(msg)
-			if msg.content == quote:
+			if quote not in msg.content:
 				found = True
 				time = msg.created_at
 				break

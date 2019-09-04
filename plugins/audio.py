@@ -15,11 +15,33 @@ player = None
 
 class AudioPlayer:
 	"""A PLAYER OF AUDIO"""
-	def __init__(self, voice_client, controller, queue):
+	def __init__(self, ctxbot, voice_client, controller, queue):
 		self.voice_client = voice_client
 		self.audio_controller = controller
 		self.queue = queue
 		self.lock = False
+
+		self.queue = asyncio.Queue()
+		self.next = asyncio.Event()
+
+		self.bot = ctxbot
+
+	# 	bot.loop.create_task(self.player_loop())
+
+	# async def player_loop(self):
+	# 	"""Player loop"""
+	# 	while not self.bot.is_closed():
+	# 		self.next.clear()
+
+	# 		try:
+	# 			async with timeout(300):
+	# 				source = await self.queue.get()
+	# 		except asyncio TimeoutError:
+	# 			continue
+	# 		self.voice_client.,play(source, after = lambda: self.bot.loop.call_soon_threadsafe(self.next.set()))
+
+	# 		await self.next.wait()
+
 
 class Audio:
 	"""Audio plugin to play Youtube links."""
@@ -56,7 +78,7 @@ class Audio:
 				return
 
 			vc = await voice_channel.connect()
-			player = AudioPlayer(vc, author, deque([]))
+			player = AudioPlayer(vc, author, asyncio.Queue())
 			await ctx.send("Connected to voice channel.")
 		except:
 			await ctx.send("Error.")
