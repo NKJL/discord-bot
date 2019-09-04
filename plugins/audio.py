@@ -43,7 +43,7 @@ class AudioPlayer:
 	# 		await self.next.wait()
 
 
-class Audio:
+class Audio(commands.Cog):
 	"""Audio plugin to play Youtube links."""
 	def __init__(self, bot):
 		self.bot = bot

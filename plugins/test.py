@@ -1,6 +1,6 @@
 from discord.ext import commands
 
-class Test:
+class Test(commands.Cog):
 	"""Test class for plugin commands"""
 	def __init__(self, bot):
 		self.bot = bot

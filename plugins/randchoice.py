@@ -3,7 +3,7 @@ import discord
 
 from discord.ext import commands
 
-class RandChoice:
+class RandChoice(commands.Cog):
 	"""Collects user inputs and selects on at random"""
 	def __init__(self, bot):
 		self.bot = bot

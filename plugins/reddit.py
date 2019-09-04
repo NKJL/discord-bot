@@ -14,7 +14,7 @@ reddit = praw.Reddit(client_id = keys.key_14, \
 
 destiny = reddit.subreddit("DestinyTheGame")
 
-class Reddit:
+class Reddit(commands.Cog):
 	"""Plugin for retrieving info from reddit."""
 	def __init__(self, bot):
 		self.bot = bot

@@ -8,7 +8,7 @@ from discord.ext import commands
 ADMIN_ID = "449356221040820235"             # Role ID for admin
 USER_ID = "191047293569466371"
 
-class Quotes:
+class Quotes(commands.Cog):
 	"""Quotes engine"""
 	def __init__(self, bot):
 		self.bot = bot
