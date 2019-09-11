@@ -3,6 +3,7 @@ import youtube_dl
 import discord
 import time
 
+from . import keys
 from collections import deque
 from discord.ext import commands
 from discord.utils import get
@@ -21,8 +22,7 @@ class AudioPlayer:
 		self.queue = queue
 		self.lock = False
 
-		self.queue = asyncio.Queue()
-		self.next = asyncio.Event()
+		self.queue = queue
 
 		self.bot = ctxbot
 
@@ -78,16 +78,18 @@ class Audio(commands.Cog):
 				return
 
 			vc = await voice_channel.connect()
-			player = AudioPlayer(vc, author, asyncio.Queue())
+			queue = asyncio.Queue(10);
+			player = AudioPlayer(self.bot, vc, author, queue)
 			await ctx.send("Connected to voice channel.")
-		except:
-			await ctx.send("Error.")
+		except Exception as error:
+			await ctx.send(error)
 
 	@audio.command(pass_context = True)
 	async def play(self, ctx, url = None):
 		"""plays given Youtube url"""
 		global player
 		author = ctx.message.author
+		
 
 		if player is None:
 			await ctx.send("No VoiceClient detected.")
@@ -99,12 +101,12 @@ class Audio(commands.Cog):
 				return
 			
 		if url is None:
-			if len(player.queue) == 0:
-				await ctx.send("Nothing in queue.")
-				return
+			if player.queue.empty():
+				await ctx.send("Please enter a url, queue is empty")
 			pass
 		else:
 			# Found on StackOverflow
+			await ctx.send(f"Playing {url}")
 			opts = {
 			    'format': 'bestaudio/best',
 			    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -134,25 +136,28 @@ class Audio(commands.Cog):
 			title = video['title']
 			duration = video['duration']
 			# audio_url = video['url']
-			# print(video['formats'])    
-			player.queue.appendleft((audio_url, title, duration))
+			# print(video['formats'])
+			await ctx.send(f"Song found: {title}. Adding to queue") 
+			try:   
+				await ctx.send(insert_queue(audio_url, title, duration))
+			except:
+				await ctx.send("Queue is full")
 
 		ffmpeg_options = {
 				'before_options': '-nostdin',
 				'options': '-vn'
 			}
-
-		while (len(player.queue) > 0):
-			popped = player.queue.popleft()
+		while (not player.queue.empty()):
+			popped = player.queue.get_nowait()
 			to_play = popped[0]
 			title = popped[1]
 			duration = int(popped[2])
 			vc = player.voice_client
-			await ctx.send("Playing:")
-			vc.play(discord.FFmpegPCMAudio(to_play, **ffmpeg_options), after=lambda e: print('done', e))
+			vc.play(discord.FFmpegPCMAudio(executable = keys.path_to_ffmpeg, source = to_play), after=lambda e: print('done', e))
 			vc.source = discord.PCMVolumeTransformer(vc.source)
 			vc.source.volume = 0.4
-			await ctx.send(f"{title}.")
+			await ctx.send(f"Now playing: {title}.")
+
 
 	@audio.command(pass_context = True)
 	async def pause(self, ctx):
@@ -243,6 +248,7 @@ class Audio(commands.Cog):
 		player = None
 		await ctx.send("Disconnected voice client.")
 
+
 	@audio.command(pass_context = True)
 	async def forcedc(self, ctx):
 		global player
@@ -260,6 +266,8 @@ class Audio(commands.Cog):
 			await player.voice_client.disconnect()
 			player = None
 			await ctx.send("Disconnected voice client.")
+
+
 
 	@audio.command(pass_context = True)
 	async def add(self, ctx, YT_link = None):
@@ -299,8 +307,10 @@ class Audio(commands.Cog):
 		title = video['title']
 		duration = video['duration']
 		audio_url = video['url']
-		player.queue.append((audio_url, title, duration))
-		await ctx.send(f"Added {title} to queue.")
+		try:   
+			await ctx.send(insert_queue(audio_url, title, duration))
+		except:
+			await ctx.send("Queue is full")
 
 
 	@audio.command(pass_context = True)
@@ -314,14 +324,18 @@ class Audio(commands.Cog):
 		if author is not player.audio_controller and player.lock:
 			await ctx.send("Controls are locked.")
 			return
-		if len(player.queue) == 0:
+		if player.queue.empty():
 			await ctx.send("Queue is empty.")
 			return
 
 		vc = player.voice_client
 		if vc.is_playing() or vc.is_paused():
 			vc.stop()
-		popped = player.queue.popleft()
+		try:
+			popped = player.queue.get_nowait()
+		except:
+			await ctx.send("Queue is empty")
+			return
 		to_play = popped[0]
 
 		ffmpeg_options = {
@@ -329,9 +343,9 @@ class Audio(commands.Cog):
 				'options': '-vn'
 			}
 
-		vc.play(discord.FFmpegPCMAudio(to_play, **ffmpeg_options), after=lambda e: print('done', e))
+		vc.play(discord.FFmpegPCMAudio(executable = keys.path_to_ffmpeg, source = to_play), after=lambda e: print('done', e))
 		vc.source = discord.PCMVolumeTransformer(vc.source)
-		vc.source.volume = 0.3
+		vc.source.volume = 0.4
 
 	@audio.command(pass_context = True)
 	async def lock(self, ctx):
@@ -369,5 +383,11 @@ class Audio(commands.Cog):
 
 		await ctx.send("Audio unlocked to controller and admin.")
 
+def insert_queue(audio_url, title, duration):
+	player.queue.put_nowait((audio_url, title, duration))
+	size = player.queue.qsize()
+	return f"{title} added, {size} songs currently in queue"
+
 def setup(bot):
 	bot.add_cog(Audio(bot))
+
