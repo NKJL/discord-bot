@@ -171,6 +171,7 @@ async def deletevc(ctx, channel_name : str):
     except:
         await ctx.send("Error. Please try again.") 
 
+
 @bot.command(pass_context = True)
 async def vkick(ctx, member : discord.Member):
     """kicks member from voice channel"""
@@ -179,9 +180,9 @@ async def vkick(ctx, member : discord.Member):
         if not top_id == ADMIN_ID:
             await ctx.send("You do not have permission to do that.")
             return
-        channel = await ctx.guild.create_voice_channel('kicked')    
-        await member.move_to(channel)
-        await channel.delete()
+        # channel = await ctx.guild.create_voice_channel('kicked')    
+        await member.move_to(None)
+        # await channel.delete()
         await ctx.send("Successfully kicked {0.name}".format(member))   
     except:
         await ctx.send("Error.")

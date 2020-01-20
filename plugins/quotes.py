@@ -24,21 +24,20 @@ class Quotes(commands.Cog):
 		if quote is None or (not isinstance(quote, str)):
 			await ctx.send("Enter valid quote string (in quotes).") 
 			return
-		iterator = ctx.message.channel.history(limit = 10, before = ctx.message)
-		time = None
-		count = 0
+		if user is None:
+			await ctx.send("Tag valid member.")
+			return
 		found = False
-		while count < 10:
-			msg = await iterator.next()
-			# print(msg)
-			if quote not in msg.content:
+		time = None
+		channel = ctx.message.channel
+		async for message in channel.history(limit = 50):
+			if user == message.author and quote in message.content:
 				found = True
-				time = msg.created_at
+				time = message.created_at
 				break
-			count += 1
-		# prev_content = [x.content for x in prev_msgs]
+
 		if not found:
-			await ctx.send("Couldn't find quote in previous 10 messages, did you copy it correctly?")
+			await ctx.send(f"Couldn't find specified message from {user.name}")
 			return
 
 		data = load_json()
@@ -49,6 +48,15 @@ class Quotes(commands.Cog):
 		data[user_id].append({'content': quote, 'time': str(time), 'index': index})
 		write_json(data)
 		await ctx.send(f"Added to data file. Index = {index}")
+
+	@quotes.command(pass_context = True)
+	async def msgs(self, ctx, user : discord.Member = None):
+		channel = ctx.message.channel
+		messages = await channel.history(limit = 20).flatten()
+		msglist = [message for message in messages if message.author == user]
+		for msg in msglist:
+			await ctx.send(msg.content)
+
 
 	@quotes.command(pass_context = True)
 	async def fadd(self, ctx, user : discord.Member = None, quote = None):
