@@ -202,6 +202,13 @@ async def close(ctx):
     except:
         await ctx.send("Error")
 
+@bot.command(pass_context = True)
+async def myID(ctx):
+    try:
+        await ctx.send(ctx.message.author.id)
+    except:
+        await ctx.send("Error")
+        
 #
 #
 # MISC. FUNCTIONS
