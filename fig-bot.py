@@ -23,6 +23,7 @@ bot.load_extension('plugins.audio')
 bot.load_extension('plugins.reddit')
 bot.load_extension('plugins.randchoice')
 bot.load_extension('plugins.quotes')
+bot.load_extension('plugins.cah')
 
 filterp = "off" # tracks profanity filter
 
@@ -54,6 +55,9 @@ async def on_message(message):
         if message.author.bot:
             return
         else:
+            if message.content.startswith("I'm") or message.content.startswith("Im") or message.content.startswith("im") or message.content.startswith("I‘m"):
+                await message.channel.send("Hi " + message.content.split(' ', 1)[1] + ", I'm Dad")
+                return
             if filterp == "on":                                 # profanity filter and currently only works on words and not phrases
                 to_filter = message.content.lower().split()
                 for word in to_filter:
@@ -186,6 +190,17 @@ async def vkick(ctx, member : discord.Member):
         await ctx.send("Successfully kicked {0.name}".format(member))   
     except:
         await ctx.send("Error.")
+
+@bot.command(pass_context = True)
+async def close(ctx):
+    try:
+        if ctx.message.author.guild_permissions.administrator:
+            await ctx.send("Closing...")
+            await bot.close()
+        else:
+            await ctx.send("User is not an admin")
+    except:
+        await ctx.send("Error")
 
 #
 #
