@@ -56,6 +56,7 @@ class Game:
         self.max_score = int(max_score)
         self.white_set = CAHSet(100000, "white")
         self.black_set = CAHSet(10000, "black")
+        self.adjust = False # <---- indicator to update player list related variables, might not be needed
         # self.player_list = players
         
         self.submissions = {}
@@ -100,6 +101,9 @@ class Game:
         if p_id in self.players.keys():
             return get_player_obj(p_id).get_hand()
         return None
+
+    def get_players(self):
+        return self.players.keys()
 
     def start(self):
         for player in self.players.keys():
@@ -166,6 +170,11 @@ class Game:
                 self.submissions = {}
             
             return winning_player
+    def adjust(self):
+        self.adjust = not self.adjust
+
+    def get_state(self):
+        return self.game_state
 
 
 class Cah(commands.Cog):
@@ -180,13 +189,42 @@ class Cah(commands.Cog):
             await ctx.send("Invalid subcommand.")
             
     @cah.command(pass_context = True)
-    async def newgame(self, ctx, max_score, players, packs):
+    async def newgame(self, ctx, max_score, packs):
         if self.game:
             await ctx.send("Game already in progress.")
         else:
-            self.game = Game(max_score, players[1:len(players) - 1].split(','), packs[1:len(packs) - 1].split(','))
-            await ctx.send(self.game.curr_prompt)
-            await ctx.send("The judge for this round is: " + self.game.get_judge())
+            self.game = Game(max_score, packs[1:len(packs) - 1].split(','))
+            await ctx.send("Game instance created.")
+
+    @cah.command(pass_context = True)
+    async def join(self, ctx):
+        if not game:
+            await ctx.send("Create a new game first with !newgame")
+            return
+
+        new_player = ctx.message.author
+        p_id = new_player.id
+        if p_id not in self.game.get_players:
+            self.game.add_player(new_player)
+            if self.game_state() != 0:
+                self.game.adjust()
+            await ctx.send(f"{new_player.name} has joined the game!")
+        else:
+            await ctx.send("You have already joined")
+
+    @cah.command(pass_context = True)
+    async def start(self, ctx)
+        if not game:
+            await ctx.send("Create a new game first with !newgame")
+            return
+        if len(self.game.get_players) < 3:
+            await ctx.send("There are less than 3 players in the lobby.")
+            return
+
+        self.game.start()
+        ctx.send(f"Prompt:\n {self.game.curr_prompt}")
+        judge = self.game.get_players[self.game.get_judge()]
+
             
     @cah.command(pass_context = True)
     async def submit(self, ctx, card_ind):
