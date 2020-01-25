@@ -40,9 +40,12 @@ class Player:
         self.player_id = player_id
         self.points = 0
 
+    def get_hand(self):
+        return self.hand
+
 class Game:
     
-    def __init__(self, max_score, players, included_packs):
+    def __init__(self, max_score, included_packs):
         
         # 0: not in progress
         # 1: waiting for submissions
@@ -53,7 +56,7 @@ class Game:
         self.max_score = int(max_score)
         self.white_set = CAHSet(100000, "white")
         self.black_set = CAHSet(10000, "black")
-        self.player_list = players
+        # self.player_list = players
         
         self.submissions = {}
         self.submitted = set()
@@ -63,39 +66,75 @@ class Game:
             self.black_set.add(cahcards.packs[int(pack)][1])
             
         self.players = {}
-        for player in players:
-            self.players[player] = Player(CAHSet(7, "white"), player)
+        # for player in players:
+        #     self.players[player] = Player(CAHSet(7, "white"), player)
             
-        for player in self.players:
-            new_hand = []
+        # for player in self.players:
+        #     new_hand = [] 
             
-            for i in range(7):
+        #     for i in range(10):
+        #         rand_card = random.choice(self.white_set.cards)
+        #         while rand_card in new_hand:
+        #             rand_card = random.choice(self.white_set.cards)
+        #         new_hand.append(rand_card)
+                           
+        #     self.players[player].hand.add(new_hand)
+        
+        # self.curr_prompt = random.choice(self.black_set.cards)
+        # self.judge_ind = 0
+        
+        # self.game_state = 1
+        for player in players
+
+    def get_player_obj(self, p_id):
+        if p_id in self.players.keys():
+            return self.players[p_id][0]
+        return None
+
+    def get_member_obj (self, p_id):
+        if p_id in self.players.keys():
+            return self.players[p_id][1]
+        return None
+
+    def get_player_hand(self, p_id):
+        if p_id in self.players.keys():
+            return get_player_obj(p_id).get_hand()
+        return None
+
+    def start(self):
+        for player in self.players.keys():
+            new_hand = [] 
+            
+            for i in range(10):
                 rand_card = random.choice(self.white_set.cards)
                 while rand_card in new_hand:
                     rand_card = random.choice(self.white_set.cards)
                 new_hand.append(rand_card)
                            
-            self.players[player].hand.add(new_hand)
-        
+            get_player_hand(player).add(new_hand)
+
         self.curr_prompt = random.choice(self.black_set.cards)
         self.judge_ind = 0
-        
         self.game_state = 1
+
+    def add_player(self, new_player: discord.Member):
+        p_id = new_player.id
+        self.players[p_id] = (Player(CAHSet(10, "white"), new_player))
             
     def new_prompt(self):
         self.curr_prompt = random.choice(self.black_set.cards)
         
     def get_judge(self):
-        return self.player_list[self.judge_ind]
+        return self.players.keys()[judge_ind]
             
-    def player_submit(self, playerid, card_ind):
-        if not playerid in self.submitted and not playerid == self.player_list[self.judge_ind]:
+    def player_submit(self, p_id, card_ind):
+        if p_id not in self.submitted and p_id not in self.players.keys():
             replace_card = random.choice(self.white_set.cards)
-            while replace_card in self.players[playerid].hand.cards:
+            while replace_card in self.players[p_id].hand.cards:
                 replace_card = random.choice(self.white_set.cards)
             
-            self.submissions[playerid] = self.players[playerid].hand.replace(card_ind, replace_card)
-            self.submitted.add(playerid)
+            self.submissions[p_id] = self.players[p_id].hand.replace(card_ind, replace_card)
+            self.submitted.add(p_id)
             
             if len(self.submitted) == len(self.players) - 1:
                 self.game_state = 2
@@ -111,8 +150,8 @@ class Game:
             self.player_indices[index] = player
         return return_string        
 
-    def judge_decision(self, player_index, playerid):
-        if playerid == self.player_list[self.judge_ind]:
+    def judge_decision(self, player_index, p_id):
+        if p_id == self.player_list[self.judge_ind]:
             
             winning_player = self.players[self.player_indices[player_index]]
             winning_player.points += 1
@@ -153,8 +192,8 @@ class Cah(commands.Cog):
     async def submit(self, ctx, card_ind):
         if self.game.game_state == 1:
             
-            playerid = str(ctx.message.author.id)
-            if self.game.player_submit(playerid, int(card_ind)):
+            p_id = str(ctx.message.author.id)
+            if self.game.player_submit(p_id, int(card_ind)):
                 await ctx.send("Submitted!")
             else:
                 await ctx.send("Failed! You are the judge or have already submitted.")
@@ -169,8 +208,8 @@ class Cah(commands.Cog):
     @cah.command(pass_context = True)
     async def judge(self, ctx, player_index):
         if self.game.game_state == 2:
-            playerid = str(ctx.message.author.id)
-            winner = self.game.judge_decision(int(player_index), playerid)
+            p_id = str(ctx.message.author.id)
+            winner = self.game.judge_decision(int(player_index), p_id)
             if self.game.game_state == 4:
                 await ctx.send(winner.player_id + " has won! Everyone else sucks ass")
                 self.game = None
