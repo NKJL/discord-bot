@@ -18,7 +18,7 @@ class CAHSet:
         self.max_cards = max_cards
         self.card_num = 0
         self.cards = []
-        self.played = Set()
+        self.played = set()
         
     def add(self, card_list):
         for card in card_list:
@@ -41,7 +41,7 @@ class CAHSet:
 
     def clear(self):
         """for game sets only"""
-        self.played = Set{}
+        self.played = set()
     
 class Player:
     
@@ -109,7 +109,7 @@ class Game:
 
     def get_player_hand(self, p_id):
         if p_id in self.players.keys():
-            return get_player_obj(p_id).get_hand()
+            return self.get_player_obj(p_id).get_hand()
         return None
 
     def get_players(self):
@@ -127,9 +127,9 @@ class Game:
                     rand_card = random.choice(self.white_set.cards)
                 new_hand.append(rand_card)
                 self.white_set.play(rand_card)
-                i++
+                i += 1
                            
-            get_player_hand(player).add(new_hand)
+            self.get_player_hand(player).add(new_hand)
 
         self.curr_prompt = random.choice(self.black_set.cards)
         self.black_set.play(self.curr_prompt)
@@ -138,13 +138,13 @@ class Game:
 
     def add_player(self, new_player: discord.Member):
         p_id = new_player.id
-        self.players[p_id] = (Player(CAHSet(10, "white"), new_player))
+        self.players[p_id] = (Player(CAHSet(10, "white"), p_id), new_player)
             
     def new_prompt(self):
         self.curr_prompt = random.choice(self.black_set.cards)
         
     def get_judge(self):
-        return self.players.keys()[judge_ind]
+        return list(self.players.keys())[self.judge_ind]
             
     def player_submit(self, p_id, card_ind):
         if p_id not in self.submitted and p_id in self.players.keys():
@@ -168,7 +168,7 @@ class Game:
         i = 0
         for sub in self.submissions.keys():
             ret_string += f"{i}: {sub}\n"
-            i++
+            i += 1
         return ret_string
 
 
@@ -216,7 +216,7 @@ class Cah(commands.Cog):
 
     @cah.command(pass_context = True)
     async def join(self, ctx):
-        if not game:
+        if not self.game:
             await ctx.send("Create a new game first with !newgame")
             return
 
@@ -224,15 +224,15 @@ class Cah(commands.Cog):
         p_id = new_player.id
         if p_id not in self.game.get_players():
             self.game.add_player(new_player)
-            if self.game_state() != 0:
+            if self.game.game_state != 0:
                 self.game.update()
             await ctx.send(f"{new_player.name} has joined the game!")
         else:
             await ctx.send("You have already joined")
 
     @cah.command(pass_context = True)
-    async def start(self, ctx)
-        if not game:
+    async def start(self, ctx):
+        if not self.game:
             await ctx.send("Create a new game first with !newgame")
             return
         if len(self.game.get_players()) < 3:
@@ -241,27 +241,40 @@ class Cah(commands.Cog):
 
         self.game.start()
         ctx.send(f"Prompt:\n {self.game.curr_prompt}")
-        judge = self.game.get_players[self.game.get_judge()]
+        judge = self.game.get_judge()
         #send hands to players
-        players = game.get_players()
+        players = list(self.game.get_players())
         for player in players:
             message = "Your hand:\n"
             i = 0
-            for card in player.hand.cards:
+            player_obj = self.game.get_player_obj(player)
+            for card in player_obj.hand.cards:
                 message += f"{i}: {card}\n"
-            player_obj = game.get_player_obj(player)
-            player_obj.send(message)
+                i += 1
+            
+            await self.game.get_member_obj(player).send(message)
 
     @cah.command(pass_context = True)
     async def fstart(self, ctx):
         """for testing purposes only"""
-        if not game:
+        if not self.game:
             await ctx.send("Create a new game first with !newgame")
             return
 
         self.game.start()
-        ctx.send(f"Prompt:\n {self.game.curr_prompt}")
-        judge = self.game.get_players[self.game.get_judge()]
+        await ctx.send(f"Prompt:\n {self.game.curr_prompt}")
+        judge = self.game.get_judge()
+        players = list(self.game.get_players())
+        print(players)
+        for player in players:
+            message = "Your hand:\n"
+            i = 0
+            player_obj = self.game.get_player_obj(player)
+            for card in player_obj.hand.cards:
+                message += f"{i}: {card}\n"
+                i += 1
+            
+            await self.game.get_member_obj(player).send(message)
 
             
     @cah.command(pass_context = True)
