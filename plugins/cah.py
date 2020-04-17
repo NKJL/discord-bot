@@ -56,7 +56,7 @@ class Game:
         self.max_score = int(max_score)
         self.white_set = CAHSet(100000, "white")
         self.black_set = CAHSet(10000, "black")
-        self.adjust = False # <---- indicator to update player list related variables, might not be needed
+        self.update = False # <---- indicator to update player list related variables, might not be needed
         # self.player_list = players
         
         self.submissions = {}
@@ -67,6 +67,7 @@ class Game:
             self.black_set.add(cahcards.packs[int(pack)][1])
             
         self.players = {}
+        self.judge_list = []
         # for player in players:
         #     self.players[player] = Player(CAHSet(7, "white"), player)
             
@@ -82,10 +83,9 @@ class Game:
         #     self.players[player].hand.add(new_hand)
         
         # self.curr_prompt = random.choice(self.black_set.cards)
-        # self.judge_ind = 0
+        self.judge_ind = 0
         
         # self.game_state = 1
-        for player in players
 
     def get_player_obj(self, p_id):
         if p_id in self.players.keys():
@@ -106,7 +106,9 @@ class Game:
         return self.players.keys()
 
     def start(self):
-        for player in self.players.keys():
+        player_keys = self.players.keys()
+        self.judge_list = list(player_keys)
+        for player in player_keys:
             new_hand = [] 
             
             for i in range(10):
@@ -132,7 +134,7 @@ class Game:
         return self.players.keys()[judge_ind]
             
     def player_submit(self, p_id, card_ind):
-        if p_id not in self.submitted and p_id not in self.players.keys():
+        if p_id not in self.submitted and p_id in self.players.keys():
             replace_card = random.choice(self.white_set.cards)
             while replace_card in self.players[p_id].hand.cards:
                 replace_card = random.choice(self.white_set.cards)
@@ -155,7 +157,7 @@ class Game:
         return return_string        
 
     def judge_decision(self, player_index, p_id):
-        if p_id == self.player_list[self.judge_ind]:
+        if p_id == self.judge_list[self.judge_ind]:
             
             winning_player = self.players[self.player_indices[player_index]]
             winning_player.points += 1
@@ -170,8 +172,8 @@ class Game:
                 self.submissions = {}
             
             return winning_player
-    def adjust(self):
-        self.adjust = not self.adjust
+    def update(self):
+        self.update = not self.update
 
     def get_state(self):
         return self.game_state
@@ -207,7 +209,7 @@ class Cah(commands.Cog):
         if p_id not in self.game.get_players:
             self.game.add_player(new_player)
             if self.game_state() != 0:
-                self.game.adjust()
+                self.game.update()
             await ctx.send(f"{new_player.name} has joined the game!")
         else:
             await ctx.send("You have already joined")
@@ -225,12 +227,23 @@ class Cah(commands.Cog):
         ctx.send(f"Prompt:\n {self.game.curr_prompt}")
         judge = self.game.get_players[self.game.get_judge()]
 
+    @cah.command(pass_context = True)
+    async def fstart(self, ctx):
+        """for testing purposes only"""
+        if not game:
+            await ctx.send("Create a new game first with !newgame")
+            return
+
+        self.game.start()
+        ctx.send(f"Prompt:\n {self.game.curr_prompt}")
+        judge = self.game.get_players[self.game.get_judge()]
+
             
     @cah.command(pass_context = True)
     async def submit(self, ctx, card_ind):
         if self.game.game_state == 1:
             
-            p_id = str(ctx.message.author.id)
+            p_id = ctx.message.author.id
             if self.game.player_submit(p_id, int(card_ind)):
                 await ctx.send("Submitted!")
             else:
@@ -246,7 +259,7 @@ class Cah(commands.Cog):
     @cah.command(pass_context = True)
     async def judge(self, ctx, player_index):
         if self.game.game_state == 2:
-            p_id = str(ctx.message.author.id)
+            p_id = ctx.message.author.id
             winner = self.game.judge_decision(int(player_index), p_id)
             if self.game.game_state == 4:
                 await ctx.send(winner.player_id + " has won! Everyone else sucks ass")
