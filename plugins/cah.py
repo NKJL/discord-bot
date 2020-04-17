@@ -18,6 +18,7 @@ class CAHSet:
         self.max_cards = max_cards
         self.card_num = 0
         self.cards = []
+        self.played = Set()
         
     def add(self, card_list):
         for card in card_list:
@@ -29,9 +30,18 @@ class CAHSet:
         return 1            
     
     def replace(self, card_ind, replace_card):
+        """for player sets only"""
         return_card = self.cards[card_ind]
         self.cards[card_ind] = replace_card
         return return_card
+
+    def play(self, card):
+        """for game sets only"""
+        self.played.add(card)
+
+    def clear(self):
+        """for game sets only"""
+        self.played = Set{}
     
 class Player:
     
@@ -44,7 +54,7 @@ class Player:
         return self.hand
 
 class Game:
-    
+    """represents a game being played"""
     def __init__(self, max_score, included_packs):
         
         # 0: not in progress
@@ -116,10 +126,13 @@ class Game:
                 while rand_card in new_hand:
                     rand_card = random.choice(self.white_set.cards)
                 new_hand.append(rand_card)
+                self.white_set.play(rand_card)
+                i++
                            
             get_player_hand(player).add(new_hand)
 
         self.curr_prompt = random.choice(self.black_set.cards)
+        self.black_set.play(self.curr_prompt)
         self.judge_ind = 0
         self.game_state = 1
 
@@ -138,9 +151,12 @@ class Game:
             replace_card = random.choice(self.white_set.cards)
             while replace_card in self.players[p_id].hand.cards:
                 replace_card = random.choice(self.white_set.cards)
-            
-            self.submissions[p_id] = self.players[p_id].hand.replace(card_ind, replace_card)
+
+            replaced = self.players[p_id].hand.replace(card_ind, replace_card)
+            self.submissions[replaced] = p_id
+            self.white_set.play(replaced)
             self.submitted.add(p_id)
+
             
             if len(self.submitted) == len(self.players) - 1:
                 self.game_state = 2
@@ -148,13 +164,13 @@ class Game:
         return 0
 
     def judge_display(self):
-        self.player_indices = [""] * len(self.players)
-        index = 1
-        return_string = ""
-        for player in self.submissions:
-            return_string += str(index) + ". " + self.submissions[player] + "\n"
-            self.player_indices[index] = player
-        return return_string        
+        ret_string = "The submissions are:\n"
+        i = 0
+        for sub in self.submissions.keys():
+            ret_string += f"{i}: {sub}\n"
+            i++
+        return ret_string
+
 
     def judge_decision(self, player_index, p_id):
         if p_id == self.judge_list[self.judge_ind]:
@@ -180,7 +196,7 @@ class Game:
 
 
 class Cah(commands.Cog):
-    """Plugin for retrieving info from reddit."""
+    """chat command structure"""
     def __init__(self, bot):
         self.bot = bot
         self.game = None
@@ -206,7 +222,7 @@ class Cah(commands.Cog):
 
         new_player = ctx.message.author
         p_id = new_player.id
-        if p_id not in self.game.get_players:
+        if p_id not in self.game.get_players():
             self.game.add_player(new_player)
             if self.game_state() != 0:
                 self.game.update()
@@ -219,13 +235,22 @@ class Cah(commands.Cog):
         if not game:
             await ctx.send("Create a new game first with !newgame")
             return
-        if len(self.game.get_players) < 3:
+        if len(self.game.get_players()) < 3:
             await ctx.send("There are less than 3 players in the lobby.")
             return
 
         self.game.start()
         ctx.send(f"Prompt:\n {self.game.curr_prompt}")
         judge = self.game.get_players[self.game.get_judge()]
+        #send hands to players
+        players = game.get_players()
+        for player in players:
+            message = "Your hand:\n"
+            i = 0
+            for card in player.hand.cards:
+                message += f"{i}: {card}\n"
+            player_obj = game.get_player_obj(player)
+            player_obj.send(message)
 
     @cah.command(pass_context = True)
     async def fstart(self, ctx):
@@ -251,6 +276,7 @@ class Cah(commands.Cog):
 
             if self.game.game_state == 2:
                 await ctx.send("All players have submitted!")
+                # FIXME: mention player instead of p_id
                 await ctx.send("The judge for this round is: " + self.game.get_judge() + "\nPlease enter the number of the winning submission" )
                 await ctx.send(self.game.judge_display())
         else:
